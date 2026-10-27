@@ -1,0 +1,21 @@
+{
+  "name": "supper-before",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "node scripts/check-endings.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "phaser": "^3.88.2"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}

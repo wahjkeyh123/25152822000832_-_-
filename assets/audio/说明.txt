@@ -1,0 +1,1 @@
+把 mp3 放在这个文件夹。键名和加载代码见 src/audio/AudioManager.js 与 PreloadScene.js。

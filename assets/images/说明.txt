@@ -1,0 +1,1 @@
+把图片放在这个文件夹。加载方式写在 src/scenes/PreloadScene.js 顶部的注释里。

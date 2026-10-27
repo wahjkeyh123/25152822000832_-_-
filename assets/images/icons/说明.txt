@@ -1,0 +1,13 @@
+把图标做成透明底 png，放在这个文件夹里，文件名必须和下面对得上。
+放好后刷新游戏，几何图形会换成你的图。建议大约 128×128。
+
+iq.png           智商（现在的占位是绿色三角）
+eq.png           情商（红色圆形）
+imagination.png  想象力（粉色方块）
+memory.png       记忆力（黄色菱形）
+physique.png     体魄（蓝色水滴）
+charm.png        魅力（紫色四角星）
+face.png         面子（橙色扇形）
+insight.png      悟性（现在的占位是黄色灯泡，顶栏和脑洞都会用）
+avatar.png       左上角头像
+child.png        画面中间的孩子
