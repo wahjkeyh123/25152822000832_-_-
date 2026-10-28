@@ -34,7 +34,7 @@ export default class MainMenuScene extends BaseScene {
     this.addMenuButton(210, 480, '退出', () => this.openExit());
     this.addMenuButton(210, 600, '怎么玩', () => this.showHowTo(), { fontSize: 18, color: 0x3a2c22, hoverColor: 0x564233 });
 
-    this.add.text(210, 660, '四个时期，每个时期安排两次。', inkText(15, '#d9c4a4')).setOrigin(0.5).setDepth(8);
+    this.add.text(210, 660, '四个时期，八种职业去向。', inkText(15, '#d9c4a4')).setOrigin(0.5).setDepth(8);
     this.events.once('shutdown', () => this.closePanel());
   }
 
@@ -194,13 +194,13 @@ export default class MainMenuScene extends BaseScene {
     this.closePanel();
     const panel = new BasePanel(this, { title: '怎么玩', width: 760, height: 520 });
     const lines = [
-      '四个时期：婴儿、幼儿园、初中、高中。',
-      '右边花悟性学会技能，卡片上写着它主要加哪项。',
-      '「安排」左边是学会的技能，右边是这一轮要做的，最多 5 个。',
-      '结束这个时期才执行。放松类会把精力加回来。',
-      '点孩子打开脑洞，每格花 5 点精力。点到悟性加 5 点。',
-      '每个时期结束回复一半精力，脑洞会重新排列。',
-      '高中结束就高考。键盘 1 到 5 把学会的技能放进本轮。',
+      '四个时期：婴儿、幼儿园、初中、高中，高中结束就高考。',
+      '右边花悟性学技能，「安排」里排进本轮，最多 5 个。',
+      '点孩子打开脑洞，每格 5 点精力。压力太大会冒出乌云。',
+      '左下角是这个时期的期望，达到了有奖励。',
+      '「书店」用积蓄买职业书，解锁职业专属技能。高中能打零工。',
+      '初中选方向，高中选职业。相关属性每回合多长一点。',
+      '最后看七项属性够上哪个职业：八种去向，也可能崩溃。',
     ];
     panel.track(this.add.text(panel.centerX, panel.top + 78, lines.join('\n'), inkText(20, COLORS.ink, {
       align: 'center',

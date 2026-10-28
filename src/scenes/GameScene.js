@@ -1,26 +1,41 @@
 /**
  * 文件：src/scenes/GameScene.js
- * 作用：培养界面。左边属性与安排，中间点孩子进脑洞，右边用悟性学习。
+ * 作用：培养界面。左边属性、安排、书店和当前期望，中间点孩子进脑洞，右边用悟性学习。
  * 属性怎么加减，写在 systems/。这里只接收点击、调用规则、刷新画面。
  */
 
-import { GAME_HEIGHT, GAME_WIDTH, SCENE, inkText } from '../config/constants.js';
+import { SCENE, inkText } from '../config/constants.js';
+import { playBgm, playSfx } from '../audio/AudioManager.js';
+import { getStage } from '../data/stages.js';
 import { learnedSkillList } from '../data/skills.js';
 import BaseScene from '../core/BaseScene.js';
 import EventBus from '../core/EventBus.js';
 import GameState from '../core/GameState.js';
 import { saveState } from '../core/SaveManager.js';
 import { spawnStatChanges } from '../effects/FloatingText.js';
+import { answerAspire } from '../systems/AspirationSystem.js';
 import { getEventById } from '../systems/EventSystem.js';
-import { clearPlan, commitPlan, digHole, learnSkill, planSkill, unplanAt } from '../systems/SheetSystem.js';
+import {
+  buyBook,
+  clearPlan,
+  commitPlan,
+  digHole,
+  learnSkill,
+  planSkill,
+  unplanAt,
+} from '../systems/SheetSystem.js';
 import { beginYearEnd, resolveEventChoice, settleYear } from '../systems/TimeSystem.js';
 import ArrangePanel from '../ui/ArrangePanel.js';
+import AspirationPanel from '../ui/AspirationPanel.js';
 import AttributePanel from '../ui/AttributePanel.js';
 import BrainHolePanel from '../ui/BrainHolePanel.js';
 import CenterChild from '../ui/CenterChild.js';
 import EventPanel from '../ui/EventPanel.js';
+import ExpectBox from '../ui/ExpectBox.js';
 import PausePanel from '../ui/PausePanel.js';
 import ProfilePanel from '../ui/ProfilePanel.js';
+import RoomBackdrop from '../ui/RoomBackdrop.js';
+import ShopPanel from '../ui/ShopPanel.js';
 import SkillPanel from '../ui/SkillPanel.js';
 import TopBar from '../ui/TopBar.js';
 
@@ -39,13 +54,20 @@ export default class GameScene extends BaseScene {
     this.arrangePanel = null;
     this.profilePanel = null;
     this.brainPanel = null;
+    this.shopPanel = null;
+    this.aspirePanel = null;
 
-    this.paintRoom();
+    this.room = new RoomBackdrop(this);
+    this.room.show(getStage(this.state.yearIndex).id, false);
     this.topBar = new TopBar(this, {
       onAvatar: () => this.openProfile(),
       onPause: () => this.togglePause(),
     });
-    this.attributes = new AttributePanel(this, () => this.openArrange());
+    this.attributes = new AttributePanel(this, {
+      onArrange: () => this.openArrange(),
+      onShop: () => this.openShop(),
+    });
+    this.expectBox = new ExpectBox(this);
     this.childView = new CenterChild(this, () => this.openBrain());
     this.skills = new SkillPanel(this, (skill) => this.onLearn(skill));
     this.logText = this.add.text(640, 688, '', inkText(14, '#2c2416')).setOrigin(0.5).setDepth(5);
@@ -60,25 +82,14 @@ export default class GameScene extends BaseScene {
     this.bindKeys();
     this.refresh();
     this.events.once('shutdown', () => this.teardown());
+    playBgm(this);
 
     if (this.state.pendingEventId) {
       const event = getEventById(this.state.pendingEventId);
       if (event) this.showEvent(event);
+    } else if (this.state.pendingAspire) {
+      this.showAspire(this.state.pendingAspire);
     }
-  }
-
-  paintRoom() {
-    const g = this.add.graphics().setDepth(0);
-    g.fillStyle(0xf0e2cc, 1);
-    g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    g.fillStyle(0xe4d2b4, 1);
-    g.fillRect(0, 430, GAME_WIDTH, GAME_HEIGHT - 430);
-    g.fillStyle(0x8eb4c9, 1);
-    g.fillRoundedRect(760, 120, 190, 130, 8);
-    g.lineStyle(8, 0xc4a484, 1);
-    g.strokeRoundedRect(760, 120, 190, 130, 8);
-    g.fillStyle(0xf2d7a2, 0.9);
-    g.fillCircle(980, 150, 22);
   }
 
   bindKeys() {
@@ -104,8 +115,10 @@ export default class GameScene extends BaseScene {
   }
 
   refresh() {
+    this.room.show(getStage(this.state.yearIndex).id, true);
     this.topBar.refresh(this.state);
     this.attributes.refresh(this.state);
+    this.expectBox.refresh(this.state);
     this.childView.refresh(this.state);
     this.skills.refresh(this.state);
     const line = this.state.log[0] || '';
@@ -113,7 +126,8 @@ export default class GameScene extends BaseScene {
   }
 
   modalOpen() {
-    return Boolean(this.eventPanel || this.pausePanel || this.profilePanel || this.brainPanel);
+    return Boolean(this.eventPanel || this.pausePanel || this.profilePanel
+      || this.brainPanel || this.shopPanel || this.aspirePanel);
   }
 
   openArrange() {
@@ -142,6 +156,34 @@ export default class GameScene extends BaseScene {
     });
   }
 
+  openShop() {
+    if (this.busy || this.modalOpen() || this.arrangePanel) return;
+    this.shopPanel = new ShopPanel(
+      this,
+      this.state,
+      (bookId) => this.onBuy(bookId),
+      () => {
+        this.shopPanel?.destroy();
+        this.shopPanel = null;
+      },
+    );
+  }
+
+  onBuy(bookId) {
+    if (!this.shopPanel) return;
+    const result = buyBook(this.state, bookId);
+    if (!result.ok) {
+      this.shopPanel.refresh(this.state, result.reason || '现在买不了');
+      return;
+    }
+    saveState(this.state);
+    playSfx(this, 'coin');
+    this.skills.tab = 'career';
+    this.skills.page = 0;
+    this.refresh();
+    this.shopPanel?.refresh(this.state);
+  }
+
   openBrain() {
     if (this.busy || this.modalOpen() || this.arrangePanel) return;
     this.brainPanel = new BrainHolePanel(
@@ -159,13 +201,13 @@ export default class GameScene extends BaseScene {
     if (!this.brainPanel) return;
     const result = digHole(this.state, index);
     if (!result.ok) {
-      this.brainPanel.hint?.setText(result.reason || '现在挖不了');
-      this.brainPanel.hint?.setColor('#a33b32');
+      this.brainPanel.refresh(this.state, result.reason || '现在挖不了');
       return;
     }
     saveState(this.state);
+    playSfx(this, result.cloud ? 'cloud' : 'dig');
     this.bus.emit('state-changed', { changes: result.changes, x: 640, y: 280 });
-    this.brainPanel?.refresh(this.state);
+    this.brainPanel?.refresh(this.state, result.cloud ? '乌云：精力白花了。压力降下来，乌云就少了。' : '');
   }
 
   onPlan(skill) {
@@ -203,6 +245,7 @@ export default class GameScene extends BaseScene {
       const result = learnSkill(this.state, skill);
       if (!result.ok) return;
       saveState(this.state);
+      playSfx(this, 'learn');
       this.bus.emit('state-changed', { changes: result.changes, x: 1100, y: 200 });
     });
   }
@@ -216,6 +259,7 @@ export default class GameScene extends BaseScene {
       const committed = commitPlan(this.state);
       this.refresh();
       if (committed.count > 0) {
+        if (committed.money > 0) playSfx(this, 'coin');
         this.bus.emit('state-changed', { changes: committed.changes, x: 420, y: 360 });
       }
       const outcome = beginYearEnd(this.state);
@@ -258,12 +302,38 @@ export default class GameScene extends BaseScene {
       this.scene.start(SCENE.ENDING);
       return;
     }
-    this.busy = false;
+    playSfx(this, 'stage');
     this.refresh();
+    if (outcome.expectReward) {
+      const reward = {};
+      if (outcome.expectReward.insight) reward.insight = outcome.expectReward.insight;
+      if (outcome.expectReward.money) reward.money = outcome.expectReward.money;
+      spawnStatChanges(this, reward, 155, 600);
+    }
+    if (outcome.ask) {
+      this.showAspire(outcome.ask);
+      return;
+    }
+    this.busy = false;
+  }
+
+  showAspire(question) {
+    this.busy = true;
+    this.aspirePanel = new AspirationPanel(this, this.state, question, (id) => {
+      const panel = this.aspirePanel;
+      this.aspirePanel = null;
+      this.time.delayedCall(0, () => {
+        panel?.destroy();
+        answerAspire(this.state, question, id);
+        saveState(this.state);
+        this.busy = false;
+        this.refresh();
+      });
+    });
   }
 
   togglePause() {
-    if (this.eventPanel) return;
+    if (this.eventPanel || this.aspirePanel) return;
     if (this.pausePanel) {
       this.pausePanel.destroy();
       this.pausePanel = null;
@@ -272,14 +342,10 @@ export default class GameScene extends BaseScene {
       return;
     }
     this.closeArrange();
-    if (this.profilePanel) {
-      this.profilePanel.destroy();
-      this.profilePanel = null;
-    }
-    if (this.brainPanel) {
-      this.brainPanel.destroy();
-      this.brainPanel = null;
-    }
+    ['profilePanel', 'brainPanel', 'shopPanel'].forEach((key) => {
+      this[key]?.destroy();
+      this[key] = null;
+    });
     this.busy = true;
     this.pausePanel = new PausePanel(this, {
       onResume: () => this.time.delayedCall(0, () => this.togglePause()),
@@ -302,10 +368,7 @@ export default class GameScene extends BaseScene {
 
   teardown() {
     if (this.offState) this.offState();
-    this.eventPanel?.destroy();
-    this.pausePanel?.destroy();
-    this.arrangePanel?.destroy();
-    this.profilePanel?.destroy();
-    this.brainPanel?.destroy();
+    ['eventPanel', 'pausePanel', 'arrangePanel', 'profilePanel', 'brainPanel', 'shopPanel', 'aspirePanel']
+      .forEach((key) => this[key]?.destroy());
   }
 }

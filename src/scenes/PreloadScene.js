@@ -14,8 +14,14 @@ export default class PreloadScene extends BaseScene {
   }
 
   preload() {
-    // 有点击音效之后，删掉下面这行前面的注释：
-    // this.load.audio('click', new URL('../../assets/audio/click.mp3', import.meta.url).href);
+    const sounds = import.meta.glob('../../assets/audio/*.{mp3,ogg,wav}', {
+      eager: true,
+      import: 'default',
+    });
+    Object.entries(sounds).forEach(([path, url]) => {
+      const file = path.split(/[/\\]/).pop() || '';
+      this.load.audio(file.replace(/\.\w+$/, ''), url);
+    });
     const icons = import.meta.glob('../../assets/images/icons/*.{png,jpg,webp}', {
       eager: true,
       import: 'default',
