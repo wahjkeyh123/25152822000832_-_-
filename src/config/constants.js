@@ -54,8 +54,8 @@ export const START_STATS = {
 
 export const CHILD_NAME = '小满';
 
-export const SAVE_KEY = 'supper-before-save-v3';
-export const SAVE_VERSION = 3;
+export const SAVE_KEY = 'supper-before-save-v4';
+export const SAVE_VERSION = 4;
 
 export const FONT = '"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif';
 

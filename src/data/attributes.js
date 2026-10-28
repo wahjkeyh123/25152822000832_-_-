@@ -18,6 +18,9 @@ export const ATTRIBUTES = [
 
 export const INSIGHT_ICON = { key: 'insight', label: '悟性', shape: 'bulb', color: 0xe2a325 };
 
+/** 压力太大时脑洞里出现的乌云。放一张 cloud.png 进 icons 文件夹就会换成图片。 */
+export const CLOUD_ICON = { key: 'cloud', label: '乌云', shape: 'cloud', color: 0x8a8f99 };
+
 export const SHEET_LABEL = Object.fromEntries(ATTRIBUTES.map((item) => [item.key, item.label]));
 
 /** 新的一局，左边面板从这里开始。面子先是 0，其他几项故意错开，避免七个都一样。 */
@@ -43,6 +46,7 @@ export const START_GROWTH = {
 };
 
 export function attributeByKey(key) {
+  if (key === CLOUD_ICON.key) return CLOUD_ICON;
   return ATTRIBUTES.find((item) => item.key === key) || INSIGHT_ICON;
 }
 

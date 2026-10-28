@@ -63,5 +63,16 @@ function drawShape(g, shape, color, x, y, size) {
   if (shape === 'fan') {
     g.slice(x, y + r * 0.2, r, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340), false);
     g.fillPath();
+    return;
+  }
+  if (shape === 'cloud') {
+    g.fillCircle(x - r * 0.42, y + r * 0.1, r * 0.42);
+    g.fillCircle(x + r * 0.05, y - r * 0.2, r * 0.52);
+    g.fillCircle(x + r * 0.5, y + r * 0.12, r * 0.38);
+    g.fillRoundedRect(x - r * 0.8, y + r * 0.05, r * 1.65, r * 0.5, r * 0.25);
+    g.fillStyle(0x5f6570, 1);
+    g.fillRect(x - r * 0.35, y + r * 0.72, 2, r * 0.25);
+    g.fillRect(x + r * 0.05, y + r * 0.72, 2, r * 0.3);
+    g.fillRect(x + r * 0.45, y + r * 0.72, 2, r * 0.22);
   }
 }

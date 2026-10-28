@@ -5,9 +5,11 @@
  */
 
 import { SAVE_VERSION } from '../config/constants.js';
-import { buildBoard } from '../data/board.js';
+import { BOARD_SIZE, buildBoard } from '../data/board.js';
 import Child from '../models/Child.js';
 import Household from '../models/Household.js';
+
+const FIRST_LOG = '从小满还是婴儿开始。先学技能，再到「安排」里排进本轮。';
 
 export default class GameState {
   constructor(raw = {}) {
@@ -16,24 +18,33 @@ export default class GameState {
     this.yearIndex = raw.yearIndex ?? 0;
     this.child = raw.child instanceof Child ? raw.child : new Child(raw.child);
     this.household = raw.household instanceof Household ? raw.household : new Household(raw.household);
-    this.log = Array.isArray(raw.log) ? [...raw.log] : ['从小满还是婴儿开始。这一轮可以安排 5 个学会的技能。'];
+    this.log = Array.isArray(raw.log) ? [...raw.log] : [FIRST_LOG];
     this.seenEvents = Array.isArray(raw.seenEvents) ? [...raw.seenEvents] : [];
     this.pendingEventId = raw.pendingEventId ?? null;
     this.actionsThisYear = Array.isArray(raw.actionsThisYear) ? [...raw.actionsThisYear] : [];
     this.plan = Array.isArray(raw.plan) ? [...raw.plan] : [];
     this.learnedSkills = Array.isArray(raw.learnedSkills) ? [...raw.learnedSkills] : [];
-    const savedBoard = Array.isArray(raw.board) && raw.board.length === 72 ? raw.board : null;
-    const boardReady = Boolean(savedBoard && savedBoard.includes('insight'));
-    this.board = boardReady ? [...savedBoard] : buildBoard(this.seed, this.yearIndex);
-    this.dug = boardReady && Array.isArray(raw.dug) ? [...raw.dug] : [];
+    /** 买过的职业书 id。 */
+    this.books = Array.isArray(raw.books) ? [...raw.books] : [];
+    /** 初中选的方向、高中选的职业。没选时是 null。 */
+    this.aspiration = { direction: null, career: null, ...(raw.aspiration || {}) };
+    /** 进入初中或高中时还没回答的志向问题：'direction' 或 'career'。 */
+    this.pendingAspire = raw.pendingAspire ?? null;
+    /** 已经完成的「当前期望」，记的是时期 id。 */
+    this.expectDone = Array.isArray(raw.expectDone) ? [...raw.expectDone] : [];
+    const savedBoard = Array.isArray(raw.board) && raw.board.length === BOARD_SIZE ? raw.board : null;
+    this.board = savedBoard ? [...savedBoard] : buildBoard(this.seed, this.yearIndex, this.child.stats.stress);
+    this.dug = savedBoard && Array.isArray(raw.dug) ? [...raw.dug] : [];
     this.exam = raw.exam ?? null;
     this.endingId = raw.endingId ?? null;
+    /** 结局落在哪个职业上。没有够格的职业时是 null。 */
+    this.career = raw.career ?? null;
   }
 
   static createNew() {
     return new GameState({
       seed: Date.now() % 1000000,
-      log: ['从小满还是婴儿开始。这一轮可以安排 5 个学会的技能。'],
+      log: [FIRST_LOG],
     });
   }
 
@@ -54,10 +65,15 @@ export default class GameState {
       actionsThisYear: this.actionsThisYear,
       plan: this.plan,
       learnedSkills: this.learnedSkills,
+      books: this.books,
+      aspiration: this.aspiration,
+      pendingAspire: this.pendingAspire,
+      expectDone: this.expectDone,
       dug: this.dug,
       board: this.board,
       exam: this.exam,
       endingId: this.endingId,
+      career: this.career,
     };
   }
 

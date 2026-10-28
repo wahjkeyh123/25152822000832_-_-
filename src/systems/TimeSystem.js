@@ -5,13 +5,17 @@
  * 一个时期怎么结束（顺序不要随便调）：
  * 1. 如果这个时期有事件，先让玩家选完。
  * 2. 再结算这个时期自带的变化（stages.js 里的 drift）。
- * 3. 如果已经是高中，立刻高考并判断结局。
- * 4. 否则进入下一个时期，发生活费，精力回复一半，脑洞图重排。
+ * 3. 检查这个时期的「当前期望」，达到就发奖励。
+ * 4. 如果已经是高中，立刻高考并判断职业结局。
+ * 5. 否则进入下一个时期，发生活费，精力回复一半，脑洞图按压力重排。
+ *    初中和高中开头还要问一次「你更想成为什么」。
  */
 
 import { getStage, stageCount } from '../data/stages.js';
+import { aspireQuestionFor } from './AspirationSystem.js';
 import { gradeExam } from './ExamSystem.js';
 import { judgeEnding } from './EndingSystem.js';
+import { settleExpect } from './ExpectSystem.js';
 import { getEventById, pickEvent } from './EventSystem.js';
 import { applyGrowth, formatSheetChanges, freshBoard, recoverEnergy, syncSheet } from './SheetSystem.js';
 import { applyEffects, formatChanges } from './StatSystem.js';
@@ -51,11 +55,14 @@ export function settleYear(state) {
   if (Object.keys(growthChanges).length > 0) {
     state.pushLog(`自然生长：${formatSheetChanges(growthChanges)}`);
   }
+  const expectReward = settleExpect(state);
 
   if (state.yearIndex + 1 >= stageCount()) {
     state.exam = gradeExam(state);
-    state.endingId = judgeEnding(state);
-    return { type: 'ending', endingId: state.endingId, exam: state.exam, driftChanges };
+    const verdict = judgeEnding(state);
+    state.endingId = verdict.endingId;
+    state.career = verdict.careerId;
+    return { type: 'ending', endingId: state.endingId, exam: state.exam, driftChanges, expectReward };
   }
 
   state.yearIndex += 1;
@@ -66,6 +73,9 @@ export function settleYear(state) {
   freshBoard(state);
   const gained = recoverEnergy(state.household);
   const energyText = gained > 0 ? `，精力回复 ${gained}` : '';
-  state.pushLog(`进入${next.grade}，家里进账 ${next.allowance} 元${energyText}。`);
-  return { type: 'next', driftChanges };
+  const clouds = state.board.filter((key) => key === 'cloud').length;
+  const cloudText = clouds > 0 ? `压力太大，脑洞里飘来 ${clouds} 朵乌云。` : '';
+  state.pushLog(`进入${next.grade}，家里进账 ${next.allowance} 元${energyText}。${cloudText}`);
+  state.pendingAspire = aspireQuestionFor(state);
+  return { type: 'next', driftChanges, expectReward, ask: state.pendingAspire };
 }

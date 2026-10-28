@@ -2,6 +2,7 @@
  * 文件：src/ui/BrainHolePanel.js
  * 作用：8 列 9 行的脑洞图。点一格花 5 点精力。
  * 这一轮的排列存在存档里，关掉再打开不会重排。
+ * 孩子压力到 60 以后会混进灰色乌云格，挖到只扣精力不加东西。
  */
 
 import { COLORS, HOLE_ENERGY_COST, inkText } from '../config/constants.js';
@@ -57,10 +58,12 @@ export default class BrainHolePanel extends BasePanel {
     this.refresh(state);
   }
 
-  refresh(state) {
+  refresh(state, message = '') {
     const enough = state.household.energy >= HOLE_ENERGY_COST;
-    this.hint.setText(`精力 ${state.household.energy}/${state.household.energyMax} · 每格 ${HOLE_ENERGY_COST} 点 · 悟性格 +5`);
-    this.hint.setColor(enough ? COLORS.muted : '#a33b32');
+    const clouds = state.board.filter((key, index) => key === 'cloud' && !state.dug.includes(index)).length;
+    const cloudText = clouds > 0 ? ` · 压力太大，有 ${clouds} 朵乌云（白花精力）` : '';
+    this.hint.setText(message || `精力 ${state.household.energy}/${state.household.energyMax} · 每格 ${HOLE_ENERGY_COST} 点 · 悟性格 +5${cloudText}`);
+    this.hint.setColor(enough && !message ? COLORS.muted : '#a33b32');
     this.cells.forEach((cell, index) => {
       const dug = state.dug.includes(index);
       cell.icon.setAlpha(dug ? 0.25 : 1);
