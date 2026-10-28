@@ -7,7 +7,7 @@
 import { STAT_LABEL, inkText } from '../config/constants.js';
 import { SHEET_LABEL } from '../data/attributes.js';
 
-const EXTRA_LABEL = { money: '积蓄', insight: '悟性', energy: '精力' };
+const EXTRA_LABEL = { money: '积蓄', insight: '悟性', energy: '精力', satisfaction: '满意度' };
 
 function isGood(key, delta) {
   if (key === 'stress') return delta < 0;
@@ -16,9 +16,8 @@ function isGood(key, delta) {
 
 export function spawnStatChanges(scene, changes, x = 640, y = 420) {
   if (!changes) return;
-  Object.keys(changes).forEach((key, index) => {
+  Object.keys(changes).filter((key) => changes[key]).forEach((key, index) => {
     const delta = changes[key];
-    if (!delta) return;
     const name = STAT_LABEL[key] || SHEET_LABEL[key] || EXTRA_LABEL[key] || key;
     const label = `${name}${delta > 0 ? '+' : ''}${delta}`;
     const text = scene.add.text(x, y + index * 28, label, inkText(22, isGood(key, delta) ? '#2f7d57' : '#a33b32', {

@@ -40,8 +40,11 @@ export default class ExpectBox {
       return;
     }
     this.title.setText(`${progress.title}… ${progress.label} ${Math.min(progress.value, progress.target)}/${progress.target}`);
-    const status = progress.done ? '已领取' : progress.reached ? '达到了，时期结束时领取' : '时期结束时检查';
-    this.reward.setText(`奖励 ${progress.reward} · ${status}`);
+    let status = `还剩 ${progress.roundsLeft} 回合检查`;
+    if (progress.roundsLeft <= 0) status = '本回合结束检查';
+    if (progress.reached) status = '已达到';
+    if (progress.done) status = '已领取';
+    this.reward.setText(`${progress.reward} · ${status}`);
     const ratio = Math.min(1, progress.value / Math.max(1, progress.target));
     this.bar.width = BAR_W * ratio;
     this.bar.setFillStyle(progress.reached ? 0x6fbf73 : 0xe2b325);

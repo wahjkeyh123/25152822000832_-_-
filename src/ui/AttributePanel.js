@@ -1,14 +1,14 @@
 /**
  * 文件：src/ui/AttributePanel.js
- * 作用：培养界面左边的属性卡，下面是「安排」「书店」两个按钮和本期提示。
+ * 作用：培养界面左边的属性卡，下面是「安排」「商店」两个按钮和本回合提示。
  * 它只读孩子的七项属性，不在这里改数字。数字变了会跳一下。
  */
 
-import { COLORS, inkText } from '../config/constants.js';
+import { COLORS, SCHEDULES_PER_ROUND, inkText } from '../config/constants.js';
 import { ATTRIBUTES } from '../data/attributes.js';
-import { stageCount, getStage } from '../data/stages.js';
+import { getStage, roundsLeft } from '../data/stages.js';
 import { pulse } from '../effects/Motion.js';
-import { schedulesLeft } from '../systems/SheetSystem.js';
+import { schedulesLeft, shopOpen } from '../systems/SheetSystem.js';
 import { paintIcon } from './paintIcon.js';
 import TextButton from './components/TextButton.js';
 import { drawWoodFrame } from './theme/frame.js';
@@ -43,14 +43,17 @@ export default class AttributePanel {
       hoverColor: 0x337a41,
       depth: 6,
     });
-    this.shop = new TextButton(scene, 240, 508, 92, 62, '书店', onShop, {
-      fontSize: 20,
+    this.shop = new TextButton(scene, 240, 508, 92, 62, '商店', onShop, {
+      fontSize: 18,
       color: 0x8a5a36,
       hoverColor: 0x6e4529,
       depth: 6,
     });
-    this.remain = scene.add.text(155, 556, '', inkText(14, '#2c2416')).setOrigin(0.5).setDepth(6);
-    this.untilExam = scene.add.text(155, 576, '', inkText(13, '#6e6256')).setOrigin(0.5).setDepth(6);
+    const tipBg = scene.add.graphics().setDepth(5);
+    tipBg.fillStyle(0x2c1d12, 0.72);
+    tipBg.fillRoundedRect(20, 545, 270, 42, 10);
+    this.remain = scene.add.text(155, 556, '', inkText(14, '#fff6e6')).setOrigin(0.5).setDepth(6);
+    this.untilExam = scene.add.text(155, 576, '', inkText(13, '#f3d48a')).setOrigin(0.5).setDepth(6);
   }
 
   refresh(state) {
@@ -63,12 +66,15 @@ export default class AttributePanel {
       this.last[row.key] = value;
       row.growth.setText(`+${growth}/回合`);
     });
-    const stagesLeft = stageCount() - state.yearIndex - 1;
-    const examLine = stagesLeft <= 0 ? '这个时期结束就高考' : `距离高考还有 ${stagesLeft} 个时期`;
+    const left = roundsLeft(state.yearIndex, state.round);
+    const open = shopOpen(state);
     const slots = schedulesLeft(state);
-    this.remain.setText(`${stage.grade} · 还能安排 ${slots} 个技能`);
-    this.untilExam.setText(examLine);
+    this.remain.setText(`本回合还能安排 ${slots}/${SCHEDULES_PER_ROUND} 个技能`);
+    this.untilExam.setText(open
+      ? (left <= 0 ? `${stage.grade}最后一回合，结束就高考` : `距离高考还有 ${left} 回合`)
+      : '商店上初中才开门');
     this.arrange.setEnabled(!state.endingId);
-    this.shop.setEnabled(!state.endingId);
+    this.shop.setLabel(open ? '商店' : '商店\n初中开');
+    this.shop.setEnabled(open && !state.endingId);
   }
 }

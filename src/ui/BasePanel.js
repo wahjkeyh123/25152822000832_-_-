@@ -1,7 +1,7 @@
 /**
  * 文件：src/ui/BasePanel.js
  * 作用：所有弹窗的父类。负责半透明遮罩、木框纸面和标题书签，挡住后面的按钮。
- * 打开后的 200 毫秒内不接受点击，避免「点结束学年」的那一下误触到新弹出来的选项。
+ * 打开后的 200 毫秒内不接受点击，避免「点结束本回合」的那一下误触到新弹出来的选项。
  */
 
 import { COLORS, GAME_HEIGHT, GAME_WIDTH, inkText } from '../config/constants.js';

@@ -2,13 +2,13 @@
  * 文件：src/ui/ArrangePanel.js
  * 作用：安排这一轮要做的技能。
  * 左边是已经学会的全部技能，点中以后按「安排」放进右边。
- * 右边是本轮列表，最多 5 个。结束这个时期时才真正执行。
+ * 右边是本回合列表，最多 3 个。按「结束本回合」才真正执行。
  */
 
 import { COLORS, SCHEDULES_PER_ROUND, inkText } from '../config/constants.js';
 import { attributeByKey } from '../data/attributes.js';
 import { getSkillById, learnedSkillList, mainEffect } from '../data/skills.js';
-import { formatSheetLines } from '../systems/SheetSystem.js';
+import { formatSheetLines, skillSatisfaction } from '../systems/SheetSystem.js';
 import BasePanel from './BasePanel.js';
 import TextButton from './components/TextButton.js';
 import { paintIcon } from './paintIcon.js';
@@ -18,7 +18,7 @@ const ROW_H = 58;
 const PER_PAGE = ROWS * 2;
 
 export default class ArrangePanel extends BasePanel {
-  constructor(scene, state, onPlan, onUnplan, onClear, onEnd, onClose) {
+  constructor(scene, state, { onPlan, onUnplan, onClear, onRepeat, onEnd, onClose }) {
     super(scene, { width: 1160, height: 660 });
     this.scene = scene;
     this.onPlan = onPlan;
@@ -29,11 +29,11 @@ export default class ArrangePanel extends BasePanel {
     if (this.skills.length > 0) this.selectedId = this.skills[0].id;
 
     this.track(scene.add.text(this.left + 36, this.top + 28, '会的技能', inkText(26)).setOrigin(0, 0.5), 5);
-    this.track(scene.add.text(this.left + 760, this.top + 28, '本轮安排', inkText(26)).setOrigin(0, 0.5), 5);
+    this.track(scene.add.text(this.left + 760, this.top + 28, '本回合安排', inkText(26)).setOrigin(0, 0.5), 5);
 
     this.buildList();
     this.buildDetail();
-    this.buildSchedule(onUnplan, onClear, onEnd, onClose);
+    this.buildSchedule(onUnplan, onClear, onRepeat, onEnd, onClose);
     this.refresh(state);
   }
 
@@ -131,7 +131,7 @@ export default class ArrangePanel extends BasePanel {
     this.objects.push(...this.planButton.nodes());
   }
 
-  buildSchedule(onUnplan, onClear, onEnd, onClose) {
+  buildSchedule(onUnplan, onClear, onRepeat, onEnd, onClose) {
     const clear = new TextButton(this.scene, this.left + 1048, this.top + 28, 140, 40, '清空列表', () => {
       if (!this.canClick()) return;
       onClear();
@@ -152,6 +152,16 @@ export default class ArrangePanel extends BasePanel {
       this.slots.push({ bg, label, hit });
     }
 
+    this.repeatButton = new TextButton(this.scene, this.left + 930, this.top + 340, 240, 46, '照上回合再排一次', () => {
+      if (!this.canClick()) return;
+      onRepeat();
+    }, { fontSize: 16, depth: 208, color: 0x3d6ea8, hoverColor: 0x2f5684 });
+    this.objects.push(...this.repeatButton.nodes());
+    this.lastText = this.track(this.scene.add.text(this.left + 930, this.top + 380, '', inkText(13, COLORS.muted, {
+      align: 'center',
+      wordWrap: { width: 360, useAdvancedWrap: true },
+    })).setOrigin(0.5, 0), 6);
+
     this.note = this.track(this.scene.add.text(
       this.left + 930,
       this.top + 500,
@@ -159,7 +169,7 @@ export default class ArrangePanel extends BasePanel {
       inkText(14, COLORS.muted),
     ).setOrigin(0.5), 6);
 
-    const end = new TextButton(this.scene, this.left + 860, this.top + 580, 250, 52, '结束这个时期', () => {
+    const end = new TextButton(this.scene, this.left + 860, this.top + 580, 250, 52, '结束本回合', () => {
       if (!this.canClick()) return;
       this.scene.time.delayedCall(0, () => onEnd());
     }, { fontSize: 18, depth: 208, color: 0x2f7d57, hoverColor: 0x256746 });
@@ -195,9 +205,12 @@ export default class ArrangePanel extends BasePanel {
       this.detailBody.setText('学会以后会出现在左边。');
       this.planButton.setEnabled(false);
     } else {
-      const lines = formatSheetLines(skill.effects, 2);
-      if (skill.energy > 0) lines.push(`回复精力 +${skill.energy}`);
-      if (skill.money) lines.push(`积蓄 +${skill.money}，压力 +${skill.core?.stress ?? 0}`);
+      const lines = formatSheetLines(skill.effects, 3);
+      const extra = [];
+      if (skill.energy > 0) extra.push(`精力 +${skill.energy}`);
+      if (skill.money) extra.push(`积蓄 +${skill.money}`);
+      if (extra.length > 0) lines[0] += `   ${extra.join('   ')}`;
+      lines.push(`压力 ${signed(skill.core?.stress ?? 0)}   满意度 ${signed(skillSatisfaction(skill))}`);
       this.detailName.setText(skill.name);
       this.detailBody.setText(lines.join('\n'));
       this.planButton.setEnabled(plan.length < SCHEDULES_PER_ROUND);
@@ -212,10 +225,17 @@ export default class ArrangePanel extends BasePanel {
       if (picked) slot.hit.setInteractive({ useHandCursor: true });
     });
     this.clearButton.setEnabled(plan.length > 0);
-    this.endButton.setLabel(`（${plan.length}/${SCHEDULES_PER_ROUND}）结束这个时期`);
+    this.endButton.setLabel(`结束本回合（${plan.length}/${SCHEDULES_PER_ROUND}）`);
+    const last = (state.lastPlan || []).map((id) => getSkillById(id)?.name).filter(Boolean);
+    this.repeatButton.setEnabled(last.length > 0);
+    this.lastText.setText(last.length > 0 ? `上回合：${last.join('、')}` : '第一次安排，还没有上回合');
     this.note.setText('点左边的技能，就会加到右边');
     this.note.setColor(COLORS.muted);
   }
+}
+
+function signed(value) {
+  return value > 0 ? `+${value}` : String(value);
 }
 
 function colorHex(color) {
