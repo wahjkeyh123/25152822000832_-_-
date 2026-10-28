@@ -28,7 +28,7 @@ export function pickEvent(state) {
   const group = candidates.filter((event) => event.priority === top);
   if (group.length === 1) return group[0];
 
-  const roll = mulberry32(state.seed + state.yearIndex * 100)();
+  const roll = mulberry32(state.seed + state.roundSerial * 100)();
   const index = Math.min(group.length - 1, Math.floor(roll * group.length));
   return group[index];
 }

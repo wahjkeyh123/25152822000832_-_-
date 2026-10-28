@@ -34,13 +34,13 @@ export const START_SHEET = {
   face: 0,
 };
 
-/** 每个时期结束时加上的数，面板右侧的「+N/回合」就是它。 */
+/** 每个回合结束时自然长的数，面板右侧的「+N/回合」就是它。志向选定后相关两项再 +1。 */
 export const START_GROWTH = {
-  iq: 2,
-  eq: 2,
-  imagination: 2,
-  memory: 2,
-  physique: 2,
+  iq: 1,
+  eq: 1,
+  imagination: 1,
+  memory: 1,
+  physique: 1,
   charm: 1,
   face: 1,
 };

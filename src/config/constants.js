@@ -29,21 +29,31 @@ export const STAT_LABEL = {
 export const STAT_MIN = 0;
 export const STAT_MAX = 100;
 
-/** 旧的自动检查仍按每个时期两次旧活动来走，玩家界面不再用这个数。 */
-export const ENERGY_PER_YEAR = 2;
-
-/** 精力用来点脑洞。一格 5 点。每进入下一个时期，回复上限的一半。 */
-export const ENERGY_MAX = 40;
+/** 精力用来点脑洞。一格 5 点。每个新回合回复 ROUND_ENERGY 点。 */
+export const ENERGY_MAX = 30;
+export const ROUND_ENERGY = 15;
 export const HOLE_ENERGY_COST = 5;
-export const SCHEDULES_PER_ROUND = 5;
+/** 每回合最多安排几个技能。一局有 19 个回合，所以一回合排 3 个就够忙了。 */
+export const SCHEDULES_PER_ROUND = 3;
 export const BOARD_COLS = 8;
 export const BOARD_ROWS = 9;
+
+/** 脑洞里的属性格，每格随机加这个范围里的点数。 */
+export const DIG_GAIN_MIN = 3;
+export const DIG_GAIN_MAX = 5;
+
+/** 左边七项属性的上限。 */
+export const SHEET_MAX = 200;
 
 export const START_MONEY = 70;
 
 /** 悟性用来在右侧学习技能。脑洞是主要来源。 */
-export const START_INSIGHT = 6;
+export const START_INSIGHT = 8;
 export const INSIGHT_MAX = 30;
+
+/** 父母满意度：0 到 100，开局 50。满了发奖励，空了全家冷下来。 */
+export const SAT_MAX = 100;
+export const START_SATISFACTION = 50;
 
 export const START_STATS = {
   study: 36,
@@ -54,8 +64,8 @@ export const START_STATS = {
 
 export const CHILD_NAME = '小满';
 
-export const SAVE_KEY = 'supper-before-save-v4';
-export const SAVE_VERSION = 4;
+export const SAVE_KEY = 'supper-before-save-v5';
+export const SAVE_VERSION = 5;
 
 export const FONT = '"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif';
 
@@ -73,17 +83,6 @@ export const COLORS = {
   disabled: 0xc8b8a4,
   dim: 0x2c2416,
   paper: '#fff8ee',
-};
-
-/**
- * 画面坐标集中在这里，方便以后挪位置。
- * x / y 写的是中心点，不是左上角。
- */
-export const LAYOUT = {
-  frameTop: 148,
-  frameHeight: 400,
-  action: { y: 616, h: 112, left: 24, gap: 8, rightLimit: 1020 },
-  endButton: { x: 1152, y: 616, w: 220, h: 112 },
 };
 
 /** 生成 Phaser 文字样式。颜色用 CSS 字符串，例如 #2c2416。 */
