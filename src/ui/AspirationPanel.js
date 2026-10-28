@@ -7,6 +7,7 @@
 import { COLORS, inkText } from '../config/constants.js';
 import { SHEET_LABEL } from '../data/attributes.js';
 import { aspireOptions } from '../systems/AspirationSystem.js';
+import { fillName } from '../utils/text.js';
 import BasePanel from './BasePanel.js';
 import TextButton from './components/TextButton.js';
 
@@ -24,9 +25,9 @@ export default class AspirationPanel extends BasePanel {
     const rows = Math.ceil(options.length / cols);
     const cellH = rows > 2 ? 90 : 120;
     super(scene, { title: '你更想成为什么', width: 900, height: 160 + rows * (cellH + 14) + 30 });
-    const lead = question === 'direction'
-      ? '小满上初中了。饭桌上，他第一次说起以后。'
-      : '高中最后一段。小满说，他想好要做什么了。';
+    const lead = fillName(question === 'direction'
+      ? '{name}上初中了。饭桌上，{ta}第一次说起以后。'
+      : '高中最后一段。{name}说，{ta}想好要做什么了。', state.child);
     this.track(scene.add.text(this.centerX, this.top + 92, lead, inkText(20, COLORS.ink)).setOrigin(0.5), 5);
     this.track(scene.add.text(this.centerX, this.top + 122, '选中后，相关的两项属性每回合多长 1 点。', inkText(15, COLORS.muted)).setOrigin(0.5), 5);
 
@@ -41,7 +42,7 @@ export default class AspirationPanel extends BasePanel {
         this.top + 160 + cellH / 2 + row * (cellH + 14),
         390,
         cellH,
-        `${option.label}\n${option.blurb}\n成长：${keys} +1`,
+        `${option.label}\n${fillName(option.blurb, state.child)}\n成长：${keys} +1`,
         () => {
           if (!this.canClick()) return;
           onPick(option.id);

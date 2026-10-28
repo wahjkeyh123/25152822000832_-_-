@@ -10,6 +10,7 @@ import { faceFor } from '../systems/StatSystem.js';
 import { getStage } from '../data/stages.js';
 import { wrapChinese } from '../utils/text.js';
 import BasePanel from './BasePanel.js';
+import { addPortrait, childArtKey } from './childArt.js';
 import TextButton from './components/TextButton.js';
 
 export default class ProfilePanel extends BasePanel {
@@ -20,24 +21,20 @@ export default class ProfilePanel extends BasePanel {
     const left = this.left + 28;
     const right = this.left + 530;
 
-    this.section(left, this.top + 78, 470, 150, '他是谁');
+    this.section(left, this.top + 78, 470, 150, '孩子');
     this.section(right, this.top + 78, 470, 150, '最亲密的朋友');
     this.section(left, this.top + 244, 470, 150, '心理状态');
     this.section(right, this.top + 244, 470, 170, '家里');
     this.section(left, this.top + 410, 470, 190, '心结');
     this.section(right, this.top + 430, 470, 170, '下一步');
 
-    const face = scene.textures.exists('avatar') ? '' : faceFor(state.child.stats, stage);
-    if (face) {
-      this.track(scene.add.text(left + 54, this.top + 150, face, inkText(42)).setOrigin(0.5), 5);
+    if (childArtKey(scene, state.child, stage.id)) {
+      addPortrait(scene, state.child, stage.id, left + 60, this.top + 158, 46, 5).forEach((node) => this.track(node, 5));
     } else {
-      const portrait = scene.add.image(left + 54, this.top + 150, 'avatar');
-      const longest = Math.max(portrait.width, portrait.height) || 1;
-      portrait.setScale(72 / longest);
-      this.track(portrait, 5);
+      this.track(scene.add.text(left + 60, this.top + 158, faceFor(state.child.stats, stage), inkText(42)).setOrigin(0.5), 5);
     }
-    this.track(scene.add.text(left + 110, this.top + 128, profile.name, inkText(26)).setOrigin(0, 0.5), 5);
-    this.track(scene.add.text(left + 110, this.top + 168, `${profile.age}    ${profile.place}`, inkText(18, COLORS.muted)).setOrigin(0, 0.5), 5);
+    this.track(scene.add.text(left + 124, this.top + 136, profile.name, inkText(26)).setOrigin(0, 0.5), 5);
+    this.track(scene.add.text(left + 124, this.top + 176, `${profile.gender}    ${profile.age}    ${profile.place}`, inkText(18, COLORS.muted)).setOrigin(0, 0.5), 5);
 
     this.block(right + 18, this.top + 124, profile.friends, 22);
     this.block(left + 18, this.top + 290, profile.mood, 20);

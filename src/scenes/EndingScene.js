@@ -15,10 +15,10 @@ import { ATTRIBUTES, SHEET_LABEL } from '../data/attributes.js';
 import { getCareer } from '../data/careers.js';
 import { closestCareer, getEnding } from '../systems/EndingSystem.js';
 import { fadeInObjects } from '../effects/Motion.js';
+import { addPortrait } from '../ui/childArt.js';
 import TextButton from '../ui/components/TextButton.js';
 import { WOOD, drawPaper, drawShadow } from '../ui/theme/frame.js';
-
-const BAR_MAX = 80;
+import { fillName } from '../utils/text.js';
 
 export default class EndingScene extends BaseScene {
   constructor() {
@@ -42,14 +42,16 @@ export default class EndingScene extends BaseScene {
       return obj;
     };
 
+    const child = state.child;
     this.paintBackground(won);
+    addPortrait(this, child, 'high', 222, 128, 50, 2).forEach((node) => add(node));
     add(this.add.text(GAME_WIDTH / 2, 76, '成 长 答 卷 · 结 业 证 书', inkText(20, '#8a5a36'))).setOrigin(0.5);
-    add(this.add.text(GAME_WIDTH / 2, 124, career ? `小满，成为了${career.name}` : ending.title, inkText(42))).setOrigin(0.5);
-    add(this.add.text(GAME_WIDTH / 2, 170, career ? `「${ending.title}」 ${career.line}` : this.subtitle(ending, near), inkText(18, COLORS.muted)))
+    add(this.add.text(GAME_WIDTH / 2, 124, career ? `${child.name}，成为了${career.name}` : `${child.name} · ${ending.title}`, inkText(42))).setOrigin(0.5);
+    add(this.add.text(GAME_WIDTH / 2, 170, fillName(career ? `「${ending.title}」 ${career.line}` : this.subtitle(ending, near), child), inkText(18, COLORS.muted)))
       .setOrigin(0.5);
     this.paintSeal(1040, 112, won);
 
-    const story = career ? `${ending.text}\n\n${career.story}` : ending.text;
+    const story = fillName(career ? `${ending.text}\n\n${career.story}` : ending.text, child);
     add(this.add.text(160, 218, story, inkText(18, COLORS.ink, {
       wordWrap: { width: 440, useAdvancedWrap: true },
       lineSpacing: 10,
@@ -144,6 +146,8 @@ export default class EndingScene extends BaseScene {
     }
     const g = this.add.graphics();
     const width = 300;
+    const peak = Math.max(...ATTRIBUTES.map((attr) => sheet[attr.key] ?? 0), ...Object.values(target?.needs || {}));
+    const BAR_MAX = Math.max(80, Math.ceil((peak * 1.1) / 10) * 10);
     ATTRIBUTES.forEach((attr, index) => {
       const rowY = y + 32 + index * 44;
       const value = sheet[attr.key] ?? 0;
@@ -169,7 +173,8 @@ export default class EndingScene extends BaseScene {
   }
 
   again() {
-    const next = GameState.createNew();
+    const { name, gender } = this.state.child;
+    const next = GameState.createNew({ name, gender });
     this.setState(next);
     saveState(next);
     this.scene.start(SCENE.GAME);

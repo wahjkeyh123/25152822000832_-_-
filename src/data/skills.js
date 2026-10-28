@@ -14,24 +14,24 @@
 import { getStage } from './stages.js';
 
 export const SKILLS = [
-  { id: 'point', stage: 'baby', name: '认身边的东西', cost: 4, energy: 0, effects: { iq: 4, memory: 2 }, core: { study: 3, stress: 2 }, detail: '灯、碗、手，一个一个指给他看。' },
+  { id: 'point', stage: 'baby', name: '认身边的东西', cost: 4, energy: 0, effects: { iq: 4, memory: 2 }, core: { study: 3, stress: 2 }, detail: '灯、碗、手，一个一个指给{ta}看。' },
   { id: 'call', stage: 'baby', name: '学叫人', cost: 4, energy: 0, effects: { eq: 3, charm: 2 }, core: { mood: 2, stress: 1 }, detail: '饿了困了，先试着叫，不用只靠哭。' },
-  { id: 'grab', stage: 'baby', name: '伸手去抓', cost: 3, energy: 0, effects: { physique: 4 }, core: { body: 3, stress: 1 }, detail: '够得着的玩具，让他自己拿。' },
-  { id: 'colors', stage: 'baby', name: '看颜色', cost: 4, energy: 5, effects: { imagination: 4 }, core: { mood: 3, stress: -3 }, detail: '红的和蓝的分开，他会盯很久。' },
-  { id: 'peekaboo', stage: 'baby', name: '躲猫猫', cost: 3, energy: 5, effects: { charm: 3, eq: 1 }, core: { mood: 3, stress: -2 }, detail: '手一拿开，他就笑出声。' },
+  { id: 'grab', stage: 'baby', name: '伸手去抓', cost: 3, energy: 0, effects: { physique: 4 }, core: { body: 3, stress: 1 }, detail: '够得着的玩具，让{ta}自己拿。' },
+  { id: 'colors', stage: 'baby', name: '看颜色', cost: 4, energy: 5, effects: { imagination: 4 }, core: { mood: 3, stress: -3 }, detail: '红的和蓝的分开，{ta}会盯很久。' },
+  { id: 'peekaboo', stage: 'baby', name: '躲猫猫', cost: 3, energy: 5, effects: { charm: 3, eq: 1 }, core: { mood: 3, stress: -2 }, detail: '手一拿开，{ta}就笑出声。' },
   { id: 'sounds', stage: 'baby', name: '听不同的声音', cost: 4, energy: 0, effects: { memory: 3, iq: 1 }, core: { study: 2, stress: 1 }, detail: '水壶、门铃、雨声，听多了会转头找。' },
 
-  { id: 'story', stage: 'kinder', name: '听完一个故事', cost: 4, energy: 5, effects: { eq: 3, imagination: 3 }, core: { mood: 3, stress: -3 }, detail: '听到最后再问他：然后呢。' },
+  { id: 'story', stage: 'kinder', name: '听完一个故事', cost: 4, energy: 5, effects: { eq: 3, imagination: 3 }, core: { mood: 3, stress: -3 }, detail: '听到最后再问{ta}：然后呢。' },
   { id: 'rhyme', stage: 'kinder', name: '背一首儿歌', cost: 4, energy: 0, effects: { memory: 4 }, core: { study: 3, stress: 2 }, detail: '短的那首，唱错了也不纠正第二遍。' },
   { id: 'yard', stage: 'kinder', name: '在院子里跑', cost: 3, energy: 10, effects: { physique: 3, charm: 1 }, core: { body: 3, mood: 3, stress: -4 }, detail: '跑到门口再跑回来，算一次。' },
   { id: 'hello', stage: 'kinder', name: '跟人打招呼', cost: 4, energy: 0, effects: { face: 2, charm: 2 }, core: { mood: 2, stress: 1 }, detail: '先看对方的眼睛，再开口。' },
   { id: 'blocks', stage: 'kinder', name: '搭一座积木城', cost: 4, energy: 0, effects: { imagination: 3, iq: 2 }, core: { study: 2, mood: 1 }, detail: '塌了就再搭，这次换个地基。' },
-  { id: 'sing-up', stage: 'kinder', name: '上台唱一句', cost: 4, energy: 0, effects: { face: 3, charm: 2 }, core: { mood: 1, stress: 2 }, detail: '只唱第一句，下来就给他鼓掌。' },
+  { id: 'sing-up', stage: 'kinder', name: '上台唱一句', cost: 4, energy: 0, effects: { face: 3, charm: 2 }, core: { mood: 1, stress: 2 }, detail: '只唱第一句，下来就给{ta}鼓掌。' },
 
   { id: 'explain', stage: 'middle', name: '把题讲顺', cost: 5, energy: 0, effects: { iq: 3, memory: 2 }, core: { study: 4, stress: 3 }, detail: '用自己的话说一遍，比再抄一遍有用。' },
   { id: 'discuss', stage: 'middle', name: '小组里说一句', cost: 4, energy: 0, effects: { eq: 3, face: 1 }, core: { mood: 2, stress: 2 }, detail: '不用抢第一句，但要有一句。' },
   { id: 'ball', stage: 'middle', name: '放学打一会儿球', cost: 4, energy: 10, effects: { physique: 3, charm: 2 }, core: { body: 3, mood: 4, stress: -5 }, detail: '球衣可以脏，晚饭前要回来。' },
-  { id: 'diary', stage: 'middle', name: '写给自己的话', cost: 4, energy: 5, effects: { imagination: 2, eq: 2 }, core: { mood: 3, stress: -3 }, detail: '不交给老师，只交给他自己。' },
+  { id: 'diary', stage: 'middle', name: '写给自己的话', cost: 4, energy: 5, effects: { imagination: 2, eq: 2 }, core: { mood: 3, stress: -3 }, detail: '不交给老师，只交给{ta}自己。' },
   { id: 'duty', stage: 'middle', name: '当一天值日班长', cost: 4, energy: 0, effects: { face: 3, eq: 2 }, core: { mood: 1, stress: 2 }, detail: '喊一声起立，全班真的站起来了。' },
   { id: 'words', stage: 'middle', name: '每天背十个单词', cost: 4, energy: 0, effects: { memory: 4 }, core: { study: 3, stress: 2 }, detail: '睡前看一遍，早上再看一遍。' },
 
@@ -54,7 +54,7 @@ export const SKILLS = [
   { id: 'training', career: 'athlete', name: '跟着体校训练', cost: 5, energy: 0, effects: { physique: 6 }, core: { body: 4, stress: 2 }, detail: '腿酸到下楼要扶墙。' },
   { id: 'match', career: 'athlete', name: '打一场正式比赛', cost: 5, energy: 0, effects: { physique: 3, charm: 3 }, core: { body: 2, mood: 2 }, detail: '输了也要跟对手握手。' },
   { id: 'mirror-host', career: 'host', name: '对着镜子主持', cost: 5, energy: 0, effects: { charm: 4, face: 3 }, core: { mood: 1, stress: 1 }, detail: '开场白说到不看稿为止。' },
-  { id: 'radio', career: 'host', name: '去校园广播站', cost: 5, energy: 0, effects: { face: 4, eq: 2 }, core: { mood: 2, stress: 1 }, detail: '午饭时间，全校都在听他的声音。' },
+  { id: 'radio', career: 'host', name: '去校园广播站', cost: 5, energy: 0, effects: { face: 4, eq: 2 }, core: { mood: 2, stress: 1 }, detail: '午饭时间，全校都在听{ta}的声音。' },
   { id: 'debate', career: 'lawyer', name: '打一场辩论赛', cost: 5, energy: 0, effects: { eq: 3, face: 3, memory: 1 }, core: { study: 2, stress: 2 }, detail: '先听完对方，再站起来。' },
   { id: 'clauses', career: 'lawyer', name: '读几条法条', cost: 5, energy: 0, effects: { memory: 5, iq: 1 }, core: { study: 3, stress: 2 }, detail: '每一个「但是」后面都有故事。' },
   { id: 'tutor-friend', career: 'teacher', name: '给同学讲一道题', cost: 5, energy: 0, effects: { eq: 4, memory: 2 }, core: { study: 2, mood: 2 }, detail: '讲到第三遍，自己也真的懂了。' },

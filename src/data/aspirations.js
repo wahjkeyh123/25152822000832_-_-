@@ -1,7 +1,7 @@
 /**
  * 文件：src/data/aspirations.js
  * 作用：初中开头问一次方向，高中开头在这个方向里问一次具体职业。
- * 选中后，keys 里的两项属性每回合成长 +1。书店里同方向的书打八折。
+ * 选中后，keys 里的两项属性每回合成长 +1。商店里同方向的书打八折。
  */
 
 export const DIRECTIONS = [
@@ -26,7 +26,7 @@ export const DIRECTIONS = [
   {
     id: 'people',
     label: '和人打交道',
-    blurb: '谁吵架了，他总是先去劝的那个。',
+    blurb: '谁吵架了，{ta}总是先去劝的那个。',
     keys: ['eq', 'face'],
   },
 ];

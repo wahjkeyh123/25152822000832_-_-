@@ -10,6 +10,7 @@ import { attributeByKey } from '../data/attributes.js';
 import { getBook } from '../data/books.js';
 import { getCareer } from '../data/careers.js';
 import { getCareerSkills, getSkillsForStage, isLearned, mainEffect } from '../data/skills.js';
+import { fillName } from '../utils/text.js';
 import { paintIcon } from './paintIcon.js';
 import { drawCard, drawTab, drawWoodFrame } from './theme/frame.js';
 
@@ -107,7 +108,7 @@ export default class SkillPanel {
     }
 
     this.empty.setText(this.tab === 'career' && list.length === 0
-      ? '还没有职业书。\n去左边「书店」用积蓄买，\n买到后这里会出现专属技能。'
+      ? '还没有职业书。\n初中起去左边「商店」用积蓄买，\n买到后这里会出现专属技能。'
       : '');
     this.pageText.setText(pages > 1 ? `${this.page + 1} / ${pages}` : '');
     this.prev.text.setVisible(pages > 1 && this.page > 0);
@@ -155,7 +156,7 @@ export default class SkillPanel {
       focusText,
       inkText(14, attr ? colorHex(attr.color) : '#8a5a36'),
     ).setDepth(6);
-    const detail = this.scene.add.text(x + 12, y + 54, skill.detail, inkText(12, COLORS.muted, {
+    const detail = this.scene.add.text(x + 12, y + 54, fillName(skill.detail, this.state?.child), inkText(12, COLORS.muted, {
       wordWrap: { width: w - 24 },
     })).setDepth(6);
     const cost = this.scene.add.text(x + 12, y + 90, '', inkText(14, '#2f7d57')).setDepth(6);

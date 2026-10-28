@@ -44,7 +44,7 @@ export function chooseDirection(state, id) {
   state.pendingAspire = null;
   addGrowth(state.child, direction.keys);
   const names = direction.keys.map((key) => SHEET_LABEL[key]).join('、');
-  state.pushLog(`小满说想往「${direction.label}」走。${names}每回合多长 ${BONUS} 点，同方向的书打八折。`);
+  state.pushLog(`{name}说想往「${direction.label}」走。${names}每回合多长 ${BONUS} 点，同方向的书打八折。`);
   return { ok: true };
 }
 
@@ -57,7 +57,7 @@ export function chooseCareer(state, id) {
   const keys = Object.keys(career.needs).slice(0, 2);
   addGrowth(state.child, keys);
   const names = keys.map((key) => SHEET_LABEL[key]).join('、');
-  state.pushLog(`小满说，以后想当${career.name}。${names}每回合多长 ${BONUS} 点。`);
+  state.pushLog(`{name}说，以后想当${career.name}。${names}每回合多长 ${BONUS} 点。`);
   return { ok: true };
 }
 

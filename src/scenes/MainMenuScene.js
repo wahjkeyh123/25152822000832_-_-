@@ -11,6 +11,7 @@ import GameState from '../core/GameState.js';
 import { clearState, hasContinue, loadState, saveState } from '../core/SaveManager.js';
 import { getStage } from '../data/stages.js';
 import BasePanel from '../ui/BasePanel.js';
+import NewGamePanel from '../ui/NewGamePanel.js';
 import TextButton from '../ui/components/TextButton.js';
 
 const MENU_BUTTON = {
@@ -94,10 +95,17 @@ export default class MainMenuScene extends BaseScene {
   }
 
   startNew() {
-    const state = GameState.createNew();
-    this.setState(state);
-    saveState(state);
-    this.scene.start(SCENE.GAME);
+    this.closePanel();
+    this.panel = new NewGamePanel(this, {
+      onStart: ({ name, gender }) => {
+        this.closePanel();
+        const state = GameState.createNew({ name, gender });
+        this.setState(state);
+        saveState(state);
+        this.scene.start(SCENE.GAME);
+      },
+      onClose: () => this.closePanel(),
+    });
   }
 
   continueGame() {
@@ -192,21 +200,21 @@ export default class MainMenuScene extends BaseScene {
 
   showHowTo() {
     this.closePanel();
-    const panel = new BasePanel(this, { title: '怎么玩', width: 760, height: 520 });
+    const panel = new BasePanel(this, { title: '怎么玩', width: 820, height: 580 });
     const lines = [
-      '四个时期：婴儿、幼儿园、初中、高中，高中结束就高考。',
-      '右边花悟性学技能，「安排」里排进本轮，最多 5 个。',
-      '点孩子打开脑洞，每格 5 点精力。压力太大会冒出乌云。',
-      '左下角是这个时期的期望，达到了有奖励。',
-      '「书店」用积蓄买职业书，解锁职业专属技能。高中能打零工。',
-      '初中选方向，高中选职业。相关属性每回合多长一点。',
-      '最后看七项属性够上哪个职业：八种去向，也可能崩溃。',
+      '婴儿 3 回合、幼儿园 4、初中 5、高中 7，高中结束就高考。',
+      '右边花悟性学技能，「安排」里每回合排 3 个，按「结束本回合」执行。',
+      '点孩子打开脑洞，每格 5 点精力，属性格随机 +3~5。压力大会冒乌云。',
+      '顶上两条线：父母满意度满了有奖励，见底家里就冷了。',
+      '压力满了会心力交瘁，压力清零反而无忧无虑。',
+      '初中起「商店」开门：减压的玩具、讨父母欢心的东西、职业书。',
+      '初中选方向，高中选职业。最后看七项属性够上哪个职业。',
     ];
-    panel.track(this.add.text(panel.centerX, panel.top + 78, lines.join('\n'), inkText(20, COLORS.ink, {
+    panel.track(this.add.text(panel.centerX, panel.top + 82, lines.join('\n'), inkText(19, COLORS.ink, {
       align: 'center',
       lineSpacing: 14,
     })).setOrigin(0.5, 0), 4);
-    const close = new TextButton(this, panel.centerX, panel.top + 460, 220, 56, '知道了', () => {
+    const close = new TextButton(this, panel.centerX, panel.top + 520, 220, 56, '知道了', () => {
       if (!panel.canClick()) return;
       this.time.delayedCall(0, () => this.closePanel());
     }, { fontSize: 20, depth: 206, color: 0x2f7d57, hoverColor: 0x256746 });
@@ -218,9 +226,10 @@ export default class MainMenuScene extends BaseScene {
 function describeSave(state) {
   if (!state) return '这个格子是空的。\n开始游戏后，进度会记在这里。';
   const stage = getStage(state.yearIndex);
+  const who = `${state.child.name}（${state.child.gender === 'girl' ? '女孩' : '男孩'}）`;
   if (state.endingId) {
-    return `小满 · ${stage.grade}\n上一局已经结束，不能从这里接着玩。`;
+    return `${who} · ${stage.grade}\n上一局已经结束，不能从这里接着玩。`;
   }
   const sheet = state.child.sheet;
-  return `小满 · ${stage.grade} · ${stage.age} 岁\n智商 ${sheet.iq}　　情商 ${sheet.eq}`;
+  return `${who} · ${stage.grade} · 第 ${state.round} 回合\n智商 ${sheet.iq}　　情商 ${sheet.eq}`;
 }

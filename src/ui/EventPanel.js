@@ -6,24 +6,25 @@
 import { COLORS, inkText } from '../config/constants.js';
 import { canChoose } from '../systems/EventSystem.js';
 import { formatEffectLines } from '../systems/StatSystem.js';
-import { wrapChinese } from '../utils/text.js';
+import { fillName, wrapChinese } from '../utils/text.js';
 import BasePanel from './BasePanel.js';
 import TextButton from './components/TextButton.js';
 
-function choiceLabel(choice, affordable) {
-  const lines = formatEffectLines(choice.effects || {}, 3);
+function choiceLabel(choice, affordable, child) {
+  const parts = formatEffectLines(choice.effects || {}, 3);
+  if (choice.sat) parts.push(`满意度${choice.sat > 0 ? '+' : ''}${choice.sat}`);
   let cost = '不花钱';
   if (choice.money < 0) cost = `花费 ${-choice.money} 元`;
   if (choice.money > 0) cost = `得到 ${choice.money} 元`;
-  const footer = affordable ? `${lines.join('  ')} · ${cost}` : '钱不够，选不了';
-  return `${choice.text}\n${footer}`;
+  const footer = affordable ? `${parts.join('  ')} · ${cost}` : '钱不够，选不了';
+  return `${fillName(choice.text, child)}\n${footer}`;
 }
 
 export default class EventPanel extends BasePanel {
   constructor(scene, event, state, onChoose) {
     super(scene, { title: event.title, width: 820, height: 460 });
     this.buttons = [];
-    const body = wrapChinese(event.text, 24);
+    const body = wrapChinese(fillName(event.text, state.child), 24);
     this.track(
       scene.add.text(this.centerX, this.top + 110, body, inkText(22, COLORS.ink, {
         align: 'center',
@@ -40,7 +41,7 @@ export default class EventPanel extends BasePanel {
         this.top + 250 + index * 88,
         700,
         76,
-        choiceLabel(choice, affordable),
+        choiceLabel(choice, affordable, state.child),
         () => {
           if (!this.canClick() || !canChoose(state, choice)) return;
           onChoose(index);

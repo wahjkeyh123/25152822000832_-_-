@@ -51,16 +51,16 @@ export function formatEffectLines(effects = {}, perLine = 2) {
 export function describeChild(stats, stage) {
   const tired = stats.stress >= 75 || stats.mood <= 28;
   if (stage?.id === 'baby') {
-    return tired ? '小满夜里醒得勤，抱着也不肯安稳。' : '小满吃饱了，眼睛还亮着。';
+    return tired ? '{name}夜里醒得勤，抱着也不肯安稳。' : '{name}吃饱了，眼睛还亮着。';
   }
   if (stage?.id === 'kinder') {
-    return tired ? '小满到了门口就摇头，不想再背那个包。' : '小满还会拉你的手去门口。';
+    return tired ? '{name}到了门口就摇头，不想再背那个包。' : '{name}还会拉你的手去门口。';
   }
-  if (tired) return '小满最近睡不好，晚饭也吃得很少。';
-  if (stats.mood <= 45) return '小满话变少了，叫他要应两声。';
+  if (tired) return '{name}最近睡不好，晚饭也吃得很少。';
+  if (stats.mood <= 45) return '{name}话变少了，叫{ta}要应两声。';
   if (stats.study <= 35) return '这个时期该看的东西，还有很多空着。';
   if (stats.body <= 35) return '体育课已经开始喘。';
-  return '晚饭时，小满还会主动说话。';
+  return '晚饭时，{name}还会主动说话。';
 }
 
 export function faceFor(stats, stage) {
