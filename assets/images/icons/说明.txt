@@ -9,5 +9,5 @@ physique.png     体魄（蓝色水滴）
 charm.png        魅力（紫色四角星）
 face.png         面子（橙色扇形）
 insight.png      悟性（现在的占位是黄色灯泡，顶栏和脑洞都会用）
-avatar.png       左上角头像
-child.png        画面中间的孩子
+
+孩子形象和头像不放这里，放在 ../child/，按性别和时期分开。

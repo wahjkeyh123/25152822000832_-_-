@@ -2,14 +2,102 @@
  * 文件：src/ui/trimIcons.js
  * 作用：图标原图四周是白边。这里从边缘把近白的底去掉，只留下图形本身。
  * 角落里单独的浅色水印会比主体小，一并丢掉。这样 22 像素的格子里也能看清。
+ * 孩子立绘走另一条路（cutoutChildren），只去背景，不丢小块，免得把手里的蜡笔也去掉。
  */
 
-const KEYS = ['iq', 'eq', 'imagination', 'memory', 'physique', 'charm', 'face', 'insight', 'avatar', 'child'];
+const KEYS = ['iq', 'eq', 'imagination', 'memory', 'physique', 'charm', 'face', 'insight'];
 
 export function trimLoadedIcons(scene) {
   KEYS.forEach((key) => {
     if (scene.textures.exists(key)) trimTexture(scene, key);
   });
+}
+
+/**
+ * 孩子立绘是白底 jpg。jpg 的白不是纯白，所以放宽一点：亮且几乎没有颜色的都算底。
+ * 去底后给边缘一圈半透明，贴到房间背景上不会有白边。
+ */
+export function cutoutChildren(scene) {
+  scene.textures.getTextureKeys()
+    .filter((key) => key.startsWith('child-'))
+    .forEach((key) => {
+      const source = scene.textures.get(key).getSourceImage();
+      if (!source) return;
+      const scale = Math.min(1, 900 / Math.max(source.width, source.height));
+      const width = Math.max(1, Math.round(source.width * scale));
+      const height = Math.max(1, Math.round(source.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(source, 0, 0, width, height);
+      const image = context.getImageData(0, 0, width, height);
+      const cropped = cutout(image);
+      if (!cropped) return;
+      scene.textures.remove(key);
+      scene.textures.addCanvas(key, cropped);
+    });
+}
+
+function isPaper(data, offset) {
+  const r = data[offset];
+  const g = data[offset + 1];
+  const b = data[offset + 2];
+  return Math.min(r, g, b) >= 232 && Math.max(r, g, b) - Math.min(r, g, b) <= 16;
+}
+
+function cutout(image) {
+  const { data, width, height } = image;
+  const clear = new Uint8Array(width * height);
+  const stack = [];
+  const consider = (index) => {
+    if (clear[index] || !isPaper(data, index * 4)) return;
+    clear[index] = 1;
+    stack.push(index);
+  };
+  for (let x = 0; x < width; x += 1) {
+    consider(x);
+    consider((height - 1) * width + x);
+  }
+  for (let y = 0; y < height; y += 1) {
+    consider(y * width);
+    consider(y * width + width - 1);
+  }
+  while (stack.length) {
+    const index = stack.pop();
+    const x = index % width;
+    if (x > 0) consider(index - 1);
+    if (x < width - 1) consider(index + 1);
+    if (index >= width) consider(index - width);
+    if (index < width * (height - 1)) consider(index + width);
+  }
+
+  let minX = width;
+  let minY = height;
+  let maxX = 0;
+  let maxY = 0;
+  for (let index = 0; index < clear.length; index += 1) {
+    const pixel = index * 4;
+    if (clear[index]) {
+      data[pixel + 3] = 0;
+      continue;
+    }
+    const x = index % width;
+    const y = (index / width) | 0;
+    const edge = (x > 0 && clear[index - 1]) || (x < width - 1 && clear[index + 1])
+      || (index >= width && clear[index - width]) || (index < width * (height - 1) && clear[index + width]);
+    if (edge) data[pixel + 3] = 150;
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  if (maxX <= minX || maxY <= minY) return null;
+  const out = document.createElement('canvas');
+  out.width = maxX - minX + 1;
+  out.height = maxY - minY + 1;
+  out.getContext('2d').putImageData(image, -minX, -minY);
+  return out;
 }
 
 function trimTexture(scene, key) {

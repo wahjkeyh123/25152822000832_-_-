@@ -1,1 +1,8 @@
 把图片放在这个文件夹。加载方式写在 src/scenes/PreloadScene.js 顶部的注释里。
+
+bg/      四个时期的背景，文件名 baby / kinder / middle / high，1280×720 最合适。画面里不要画孩子。
+child/   孩子形象，文件名「性别-时期」，例如 girl-middle.jpg。白底即可，加载时会自动抠掉白底。
+         性别：boy / girl；时期：baby / kinder / middle / high。
+icons/   七项属性和悟性的图标，见那里的说明。
+
+缺哪张图，游戏会用程序画的占位，不会报错。

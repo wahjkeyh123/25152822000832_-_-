@@ -1,6 +1,6 @@
 /**
  * 文件：src/ui/RoomBackdrop.js
- * 作用：培养界面的房间背景。四个时期各画一间，全部用 Graphics 画，不用外部图片。
+ * 作用：培养界面的房间背景。优先用 assets/images/bg/ 里的图；缺图时四个时期各用 Graphics 画一间。
  * 婴儿：婴儿床和挂铃。幼儿园：小黑板和积木。初中：书桌台灯和书架。高中：堆满卷子的书桌、日历、夜景。
  * 左右两侧会被属性栏和学习栏盖住，所以家具只摆在中间 300～990 这一段。
  */
@@ -25,16 +25,33 @@ export default class RoomBackdrop {
     this.stageId = null;
   }
 
-  /** 换到某个时期的房间。animate 为 true 时淡入淡出。 */
+  /** 换到某个时期的房间。animate 为 true 时淡入淡出。有 bg-时期 图片就用图，没有就用下面的画法。 */
   show(stageId, animate = false) {
     if (stageId === this.stageId) return;
     this.stageId = stageId;
-    const next = this.scene.add.graphics().setDepth(0);
-    paintRoom(next, stageId);
+    const next = this.scene.textures.exists(`bg-${stageId}`)
+      ? this.photo(stageId)
+      : paintRoom(this.scene.add.graphics(), stageId);
+    next.setDepth(0);
     const old = this.layer;
     this.layer = next;
     if (animate && old) crossFade(this.scene, old, next);
     else old?.destroy();
+  }
+
+  /** 背景图铺满画面，底部压一层暖色渐暗，让最下面那行记录看得清。 */
+  photo(stageId) {
+    const image = this.scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, `bg-${stageId}`);
+    const cover = Math.max(GAME_WIDTH / image.width, GAME_HEIGHT / image.height);
+    image.setScale(cover);
+    const shade = this.scene.add.graphics();
+    for (let step = 0; step < 12; step += 1) {
+      shade.fillStyle(0x2c1a10, 0.03 + step * 0.012);
+      shade.fillRect(0, GAME_HEIGHT - 120 + step * 10, GAME_WIDTH, 10);
+    }
+    shade.fillStyle(0x2c1a10, 0.18);
+    shade.fillRect(0, 0, GAME_WIDTH, 100);
+    return this.scene.add.container(0, 0, [image, shade]);
   }
 }
 
@@ -47,6 +64,7 @@ function paintRoom(g, stageId) {
   else if (stageId === 'middle') paintMiddle(g, colors);
   else paintHigh(g, colors);
   paintLight(g, stageId);
+  return g;
 }
 
 function paintWall(g, colors) {
