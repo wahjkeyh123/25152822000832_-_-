@@ -13,6 +13,10 @@ import BasePanel from './BasePanel.js';
 import TextButton from './components/TextButton.js';
 import { paintIcon } from './paintIcon.js';
 
+const ROWS = 7;
+const ROW_H = 58;
+const PER_PAGE = ROWS * 2;
+
 export default class ArrangePanel extends BasePanel {
   constructor(scene, state, onPlan, onUnplan, onClear, onEnd, onClose) {
     super(scene, { width: 1160, height: 660 });
@@ -34,30 +38,73 @@ export default class ArrangePanel extends BasePanel {
   }
 
   buildList() {
-    const columns = this.skills.length > 6 ? 2 : 1;
-    const rowCount = Math.max(1, Math.ceil(this.skills.length / columns));
-    const listTop = this.top + 68;
-    const listBottom = this.top + this.height - 176;
-    const rowH = Math.min(58, Math.floor((listBottom - listTop) / rowCount));
-    const colW = columns === 2 ? 340 : 640;
+    this.page = 0;
+    this.rowObjects = [];
+    this.pageText = this.track(this.scene.add.text(this.left + 356, this.top + 500, '', inkText(16)).setOrigin(0.5), 6);
+    this.prevButton = new TextButton(this.scene, this.left + 270, this.top + 500, 60, 34, '‹', () => this.turn(-1), {
+      fontSize: 22, depth: 208, color: 0x8a5a36, hoverColor: 0x6b4b30,
+    });
+    this.nextButton = new TextButton(this.scene, this.left + 442, this.top + 500, 60, 34, '›', () => this.turn(1), {
+      fontSize: 22, depth: 208, color: 0x8a5a36, hoverColor: 0x6b4b30,
+    });
+    this.objects.push(...this.prevButton.nodes(), ...this.nextButton.nodes());
+    this.buildRows();
 
-    this.skills.forEach((skill, index) => {
-      const col = columns === 2 ? index % 2 : 0;
-      const row = columns === 2 ? Math.floor(index / 2) : index;
+    this.empty = this.track(this.scene.add.text(
+      this.left + 360,
+      this.top + 180,
+      '还没有学会的技能。\n先到右侧学习栏花悟性。',
+      inkText(20, COLORS.muted, { align: 'center', lineSpacing: 8 }),
+    ).setOrigin(0.5), 6);
+  }
+
+  pageCount() {
+    return Math.max(1, Math.ceil(this.skills.length / PER_PAGE));
+  }
+
+  turn(step) {
+    if (!this.canClick()) return;
+    const next = Math.max(0, Math.min(this.page + step, this.pageCount() - 1));
+    if (next === this.page) return;
+    this.page = next;
+    this.buildRows();
+    this.refresh(this.state);
+  }
+
+  /** 两列、每列 7 行，固定行高。技能多了就翻页，不再把行挤扁。 */
+  buildRows() {
+    this.rowObjects.forEach((obj) => obj.destroy());
+    this.objects = this.objects.filter((obj) => !this.rowObjects.includes(obj));
+    this.rowObjects = [];
+    this.rows = [];
+    const colW = 340;
+    const listTop = this.top + 68;
+    const shown = this.skills.slice(this.page * PER_PAGE, this.page * PER_PAGE + PER_PAGE);
+    const add = (obj, depth) => {
+      this.track(obj, depth);
+      this.rowObjects.push(obj);
+      return obj;
+    };
+
+    shown.forEach((skill, index) => {
+      const col = Math.floor(index / ROWS);
+      const row = index % ROWS;
       const x = this.left + 36 + col * (colW + 16) + colW / 2;
-      const y = listTop + row * rowH + rowH / 2;
-      const bg = this.track(this.scene.add.rectangle(x, y, colW, rowH - 8, 0xfff9f0).setStrokeStyle(2, 0xe2d2bc), 5);
+      const y = listTop + row * ROW_H + ROW_H / 2;
+      const bg = add(this.scene.add.rectangle(x, y, colW, ROW_H - 8, 0xfff9f0).setStrokeStyle(2, 0xe2d2bc), 5);
       const main = mainEffect(skill);
       const attr = main ? attributeByKey(main.key) : null;
-      if (attr) this.track(paintIcon(this.scene, attr, x - colW / 2 + 28, y, 26, 206), 6);
-      const name = this.track(this.scene.add.text(x - colW / 2 + 50, y, skill.name, inkText(18)).setOrigin(0, 0.5), 6);
-      const tag = this.track(this.scene.add.text(
+      if (attr) add(paintIcon(this.scene, attr, x - colW / 2 + 28, y, 26, 206), 6);
+      const name = add(this.scene.add.text(x - colW / 2 + 50, y, skill.name, inkText(18)).setOrigin(0, 0.5), 6);
+      let tagText = attr ? attr.label : '';
+      if (!attr && skill.money) tagText = '积蓄';
+      const tag = add(this.scene.add.text(
         x + colW / 2 - 16,
         y,
-        attr ? attr.label : '',
-        inkText(15, attr ? colorHex(attr.color) : COLORS.muted),
+        tagText,
+        inkText(15, attr ? colorHex(attr.color) : '#8a5a36'),
       ).setOrigin(1, 0.5), 6);
-      const hit = this.track(this.scene.add.rectangle(x, y, colW, rowH - 8, 0xffffff, 0.001), 12);
+      const hit = add(this.scene.add.rectangle(x, y, colW, ROW_H - 8, 0xffffff, 0.001), 12);
       hit.setInteractive({ useHandCursor: true });
       hit.on('pointerup', (pointer, localX, localY, event) => {
         if (event && event.stopPropagation) event.stopPropagation();
@@ -67,13 +114,6 @@ export default class ArrangePanel extends BasePanel {
       });
       this.rows.push({ skill, bg, name, tag, hit });
     });
-
-    this.empty = this.track(this.scene.add.text(
-      this.left + 360,
-      this.top + 180,
-      '还没有学会的技能。\n先到右侧学习栏花悟性。',
-      inkText(20, COLORS.muted, { align: 'center', lineSpacing: 8 }),
-    ).setOrigin(0.5), 6);
   }
 
   buildDetail() {
@@ -132,8 +172,17 @@ export default class ArrangePanel extends BasePanel {
   }
 
   refresh(state) {
+    this.state = state;
     const plan = state.plan || [];
     this.empty.setVisible(this.skills.length === 0);
+    const pages = this.pageCount();
+    this.pageText.setText(pages > 1 ? `${this.page + 1} / ${pages}` : '');
+    this.prevButton.setVisible(pages > 1);
+    this.nextButton.setVisible(pages > 1);
+    if (pages > 1) {
+      this.prevButton.setEnabled(this.page > 0);
+      this.nextButton.setEnabled(this.page < pages - 1);
+    }
     this.rows.forEach((row) => {
       const on = row.skill.id === this.selectedId;
       row.bg.setStrokeStyle(on ? 4 : 2, on ? 0xc45c26 : 0xe2d2bc);
@@ -148,6 +197,7 @@ export default class ArrangePanel extends BasePanel {
     } else {
       const lines = formatSheetLines(skill.effects, 2);
       if (skill.energy > 0) lines.push(`回复精力 +${skill.energy}`);
+      if (skill.money) lines.push(`积蓄 +${skill.money}，压力 +${skill.core?.stress ?? 0}`);
       this.detailName.setText(skill.name);
       this.detailBody.setText(lines.join('\n'));
       this.planButton.setEnabled(plan.length < SCHEDULES_PER_ROUND);
