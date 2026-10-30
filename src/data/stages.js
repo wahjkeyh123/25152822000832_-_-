@@ -1,9 +1,9 @@
 /**
  * 文件：src/data/stages.js
- * 作用：四个成长时期。顺序就是游戏推进的顺序。
+ * 作用：五个成长时期。顺序就是游戏推进的顺序。
  *
  * 字段说明：
- * - rounds：这个时期有几个回合。婴儿 3、幼儿园 4、初中 5、高中 7。
+ * - rounds：这个时期有几个回合。婴儿 3、幼儿园 4、小学 5、初中 5、高中 7。
  * - allowance：进入这个时期时家里进账多少。
  * - drift：每回合结束时孩子自己的变化（主要是压力慢慢往上走）。
  * - satDrift：每回合父母满意度自己掉多少。孩子越大，父母越着急。
@@ -34,28 +34,42 @@ export const STAGES = [
     rounds: 4,
     faceOk: '🧒',
     faceBad: '😣',
-    blurb: '{name}开始有了自己的不愿意。兴趣班和午睡，第一次要你选。',
+    blurb: '{name}开始认字、数数。兴趣班和午睡，第一次要你选。',
     allowance: 40,
-    expect: { title: '脑子里有画', key: 'imagination', target: 60, reward: { money: 30 } },
+    expect: { title: '能认几个字', key: 'memory', target: 48, reward: { money: 25 } },
     drift: { stress: 2 },
     satDrift: -2,
   },
   {
     index: 2,
+    id: 'elem',
+    grade: '小学',
+    age: 8,
+    rounds: 5,
+    faceOk: '😊',
+    faceBad: '😟',
+    blurb: '语文、数学、英语排进了课表。{name}第一次有了作业本。商店开门了。',
+    allowance: 50,
+    expect: { title: '把课文背下来', key: 'iq', target: 72, reward: { insight: 7 } },
+    drift: { stress: 2 },
+    satDrift: -2,
+  },
+  {
+    index: 3,
     id: 'middle',
     grade: '初中',
     age: 13,
     rounds: 5,
     faceOk: '🙂',
     faceBad: '😐',
-    blurb: '作业、同学和补习挤在同一张桌子上。{name}开始看你的脸色。商店开门了。',
+    blurb: '同桌林舟、后座顾河、值日的陈勉来了。职业道具也开卖。',
     allowance: 60,
-    expect: { title: '记得住事', key: 'memory', target: 90, reward: { insight: 8 } },
+    expect: { title: '记得住事', key: 'memory', target: 110, reward: { insight: 8 } },
     drift: { stress: 3 },
     satDrift: -3,
   },
   {
-    index: 3,
+    index: 4,
     id: 'high',
     grade: '高中',
     age: 17,
@@ -64,7 +78,7 @@ export const STAGES = [
     faceBad: '😫',
     blurb: '最后一段。卷子和睡眠在抢同一个晚上，七个回合之后就是高考。',
     allowance: 60,
-    expect: { title: '能好好说话', key: 'eq', target: 120, reward: { money: 40 } },
+    expect: { title: '能好好说话', key: 'eq', target: 140, reward: { money: 40 } },
     drift: { stress: 3 },
     satDrift: -3,
   },

@@ -5,8 +5,9 @@
  * 改职业门槛去 src/data/careers.js，改结局文字去 src/data/endings.js。
  */
 
-import { CAREERS, careerGap, careerMargin, getCareer, meetsCareer } from '../data/careers.js';
+import { CAREERS, careerGap, careerMargin, careerStory, careerTier, getCareer, meetsCareer } from '../data/careers.js';
 import { ENDINGS, isBurnout } from '../data/endings.js';
+import { fillName } from '../utils/text.js';
 
 export function judgeEnding(state) {
   const sheet = state.child.sheet;
@@ -35,3 +36,18 @@ export function closestCareer(state) {
 export function getEnding(id) {
   return ENDINGS.find((ending) => ending.id === id) || ENDINGS[ENDINGS.length - 1];
 }
+
+/** 结局页左边那一段：四类开头 + 职业三档故事。崩溃 / 漂流会点出最接近的职业。 */
+export function endingStory(state) {
+  const ending = getEnding(state.endingId);
+  const career = getCareer(state.career);
+  const near = closestCareer(state);
+  const extra = { near: near?.name || '一条路' };
+  if (!career) return fillName(ending.text, state.child, extra);
+  const tier = careerTier(career, state.child.sheet);
+  const open = ending.open?.[tier] || ending.text || '';
+  const body = careerStory(career, state.child.sheet);
+  return fillName(`${open}\n\n${body}`, state.child, extra);
+}
+
+export { careerTier };

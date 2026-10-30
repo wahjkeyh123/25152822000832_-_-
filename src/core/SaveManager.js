@@ -5,7 +5,7 @@
  * 已经结局的存档不能「继续」，必须重开。
  */
 
-import { SAVE_KEY, SAVE_VERSION } from '../config/constants.js';
+import { ALBUM_KEY, SAVE_KEY, SAVE_VERSION } from '../config/constants.js';
 import GameState from './GameState.js';
 
 export function saveState(state) {
@@ -32,4 +32,27 @@ export function clearState() {
 export function hasContinue() {
   const state = loadState();
   return Boolean(state && !state.endingId);
+}
+
+export function loadAlbum() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(ALBUM_KEY) || '[]');
+    return Array.isArray(raw) ? raw.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** 真正走到某个职业去向时记下。同一职业只记一次。 */
+export function rememberCareer(careerId) {
+  if (!careerId) return loadAlbum();
+  const seen = loadAlbum();
+  if (seen.includes(careerId)) return seen;
+  const next = [...seen, careerId];
+  try {
+    localStorage.setItem(ALBUM_KEY, JSON.stringify(next));
+  } catch {
+    return seen;
+  }
+  return next;
 }

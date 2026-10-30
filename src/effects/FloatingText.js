@@ -7,7 +7,7 @@
 import { STAT_LABEL, inkText } from '../config/constants.js';
 import { SHEET_LABEL } from '../data/attributes.js';
 
-const EXTRA_LABEL = { money: '积蓄', insight: '悟性', energy: '精力', satisfaction: '满意度' };
+const EXTRA_LABEL = { money: '积蓄', insight: '悟性', energy: '精力', satisfaction: '满意度', closeness: '亲密度' };
 
 function isGood(key, delta) {
   if (key === 'stress') return delta < 0;

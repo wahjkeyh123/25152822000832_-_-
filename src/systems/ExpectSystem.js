@@ -2,11 +2,13 @@
  * 文件：src/systems/ExpectSystem.js
  * 作用：每个时期的「当前期望」。时期最后一回合结束时检查一次，达到就发奖励。
  * 达到了父母满意度 +15，没达到 -10。期望写在 src/data/stages.js 的 expect 里。
+ * 当期已经达到目标时，点左下角那一块还能再领一笔额外奖励，每期一次。
  */
 
 import { SHEET_LABEL } from '../data/attributes.js';
 import { getStage } from '../data/stages.js';
 import { changeSatisfaction } from './MoodSystem.js';
+import { applySheet } from './SheetSystem.js';
 
 const SAT_HIT = 15;
 const SAT_MISS = -10;
@@ -25,8 +27,31 @@ export function expectProgress(state) {
     reward: rewardText(expect.reward),
     reached: value >= expect.target,
     done: state.expectDone.includes(stage.id),
+    bonusClaimed: (state.expectBonusClaimed || []).includes(stage.id),
     roundsLeft: stage.rounds - state.round,
   };
+}
+
+/** 达到目标后点一下，额外发一笔。每期只能领一次，和期末那次结算分开。 */
+export function claimExpectBonus(state) {
+  const stage = getStage(state.yearIndex);
+  const progress = expectProgress(state);
+  if (!progress) return { ok: false, reason: '这一期没有期望' };
+  if (!progress.reached) return { ok: false, reason: '还没达到，先把这项养上去' };
+  state.expectBonusClaimed = state.expectBonusClaimed || [];
+  if (state.expectBonusClaimed.includes(stage.id)) {
+    return { ok: false, reason: '额外奖励已经领过了' };
+  }
+  const reward = stage.expect.reward || {};
+  const insight = 3 + Math.floor((reward.insight || 0) / 2);
+  const money = 12 + Math.floor((reward.money || 0) / 2);
+  state.household.insight += insight;
+  state.household.money += money;
+  const satisfaction = changeSatisfaction(state, 6);
+  const sheet = applySheet(state.child.sheet, { [stage.expect.key]: 6 });
+  state.expectBonusClaimed.push(stage.id);
+  state.pushLog(`点开期望「${progress.title}」，额外领了悟性+${insight}、积蓄+${money}。`);
+  return { ok: true, changes: { insight, money, satisfaction, ...sheet } };
 }
 
 export function rewardText(reward = {}) {
@@ -50,7 +75,7 @@ export function settleExpect(state) {
   }
   const reward = expect.reward || {};
   const household = state.household;
-  if (reward.insight) household.insight = Math.min(household.insightMax, household.insight + reward.insight);
+  if (reward.insight) household.insight += reward.insight;
   if (reward.money) household.money += reward.money;
   changeSatisfaction(state, SAT_HIT);
   state.expectDone.push(stage.id);

@@ -1,52 +1,49 @@
 /**
  * 文件：src/ui/EventPanel.js
- * 作用：弹出一件必须二选一的事。两个选项的结果不同，这是游戏里「真正要做决定」的地方。
+ * 作用：弹出一件要做决定的事。选项上不写加减，结算时再按这步合不合适给结果。
  */
 
 import { COLORS, inkText } from '../config/constants.js';
 import { canChoose } from '../systems/EventSystem.js';
-import { formatEffectLines } from '../systems/StatSystem.js';
-import { fillName, wrapChinese } from '../utils/text.js';
+import { fillState, wrapChinese } from '../utils/text.js';
 import BasePanel from './BasePanel.js';
 import TextButton from './components/TextButton.js';
 
-function choiceLabel(choice, affordable, child) {
-  const parts = formatEffectLines(choice.effects || {}, 3);
-  if (choice.sat) parts.push(`满意度${choice.sat > 0 ? '+' : ''}${choice.sat}`);
-  let cost = '不花钱';
-  if (choice.money < 0) cost = `花费 ${-choice.money} 元`;
-  if (choice.money > 0) cost = `得到 ${choice.money} 元`;
-  const footer = affordable ? `${parts.join('  ')} · ${cost}` : '钱不够，选不了';
-  return `${fillName(choice.text, child)}\n${footer}`;
-}
-
 export default class EventPanel extends BasePanel {
   constructor(scene, event, state, onChoose) {
-    super(scene, { title: event.title, width: 820, height: 460 });
+    const count = event.choices.length;
+    const tall = count >= 3;
+    super(scene, { title: event.title, width: 820, height: tall ? 540 : 460 });
     this.buttons = [];
-    const body = wrapChinese(fillName(event.text, state.child), 24);
+    const body = wrapChinese(fillState(event.text, state, { pal: event.pal }), 26);
     this.track(
-      scene.add.text(this.centerX, this.top + 110, body, inkText(22, COLORS.ink, {
+      scene.add.text(this.centerX, this.top + 100, body, inkText(22, COLORS.ink, {
         align: 'center',
         lineSpacing: 8,
       })).setOrigin(0.5, 0),
       4,
     );
 
+    const btnH = tall ? 58 : 76;
+    const gap = tall ? 68 : 88;
+    const startY = this.top + (tall ? 236 : 250);
     event.choices.forEach((choice, index) => {
       const affordable = canChoose(state, choice);
+      const label = affordable
+        ? fillState(choice.text, state, { pal: event.pal })
+        : `${fillState(choice.text, state, { pal: event.pal })}\n钱不够，选不了`;
       const button = new TextButton(
         scene,
         this.centerX,
-        this.top + 250 + index * 88,
+        startY + index * gap,
         700,
-        76,
-        choiceLabel(choice, affordable, state.child),
+        btnH,
+        label,
         () => {
           if (!this.canClick() || !canChoose(state, choice)) return;
           onChoose(index);
         },
-        { fontSize: 18, depth: 206, color: index === 0 ? 0xc45c26 : 0x3d6ea8, hoverColor: index === 0 ? 0xa84b1c : 0x2f5684 },
+        { fontSize: 18, depth: 206, color: 0x5c4636, hoverColor: 0x3b2616 },
       );
       button.setEnabled(affordable);
       this.buttons.push(button);

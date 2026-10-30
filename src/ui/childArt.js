@@ -1,12 +1,28 @@
 /**
  * 文件：src/ui/childArt.js
  * 作用：找到「这个性别、这个时期」的孩子立绘，并能裁出头像。
- * 图片放在 assets/images/child/，文件名是 性别-时期，例如 girl-middle.jpg。
+ * 图片放在 assets/images/child/，文件名是 性别-时期，例如 girl-elem.jpg。
  * 缺图时返回 null，调用方自己画占位。
  */
 
 /** 头在整张立绘里大约占多高。婴儿是坐姿，头最大。 */
-const HEAD_RATIO = { baby: 0.42, kinder: 0.26, middle: 0.17, high: 0.16 };
+const HEAD_RATIO = { baby: 0.42, kinder: 0.26, elem: 0.2, middle: 0.17, high: 0.16 };
+
+/**
+ * 中间孩子的落点和大小。人始终站在画面正中。
+ * 教室图自己取景，把地板让到中间，所以不用挪到椅子上。x / y 是脚在 1280×720 里的位置。
+ */
+export const CHILD_SPOT = {
+  baby: { x: 640, y: 598, height: 292 },
+  kinder: { x: 640, y: 590, height: 368 },
+  elem: { x: 640, y: 586, height: 392 },
+  middle: { x: 640, y: 586, height: 412 },
+  high: { x: 640, y: 586, height: 428 },
+};
+
+export function childSpot(stageId) {
+  return CHILD_SPOT[stageId] || CHILD_SPOT.elem;
+}
 
 export function childArtKey(scene, child, stageId) {
   const key = `child-${child?.gender === 'girl' ? 'girl' : 'boy'}-${stageId}`;

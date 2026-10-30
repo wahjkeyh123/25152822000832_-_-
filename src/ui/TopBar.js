@@ -142,7 +142,7 @@ export default class TopBar {
     this.avatarFace.setText(this.hasArt ? '' : faceFor(state.child.stats, stage));
     this.nameText.setText(state.child.name);
     this.stageText.setText(`${stage.grade} · ${stage.age} 岁 · 第 ${state.round}/${stage.rounds} 回合`);
-    this.setValue(this.insightText, 'insight', `悟性 ${h.insight}/${h.insightMax}`, h.insight);
+    this.setValue(this.insightText, 'insight', `悟性 ${h.insight}`, h.insight);
     this.setValue(this.energyText, 'energy', `精力 ${h.energy}/${h.energyMax}`, h.energy);
     this.setValue(this.moneyText, 'money', `积蓄 ${h.money}`, h.money);
     const satColor = h.satisfaction >= 80 ? 0x5fb35a : h.satisfaction <= 25 ? 0x8b8f9a : 0xf0b43c;

@@ -16,10 +16,13 @@ export const ATTRIBUTES = [
   { key: 'face', label: '面子', shape: 'fan', color: 0xf08a2a },
 ];
 
-export const INSIGHT_ICON = { key: 'insight', label: '悟性', shape: 'bulb', color: 0xe2a325 };
+/** 脑洞里只出这五项。面子和魅力靠技能、事件和商店长，不在格子上。 */
+export const BOARD_KEYS = ['iq', 'eq', 'imagination', 'memory', 'physique'];
+export const BOARD_ATTRIBUTES = ATTRIBUTES.filter((item) => BOARD_KEYS.includes(item.key));
 
-/** 压力太大时脑洞里出现的乌云。放一张 cloud.png 进 icons 文件夹就会换成图片。 */
-export const CLOUD_ICON = { key: 'cloud', label: '乌云', shape: 'cloud', color: 0x8a8f99 };
+export const INSIGHT_ICON = { key: 'insight', label: '悟性', shape: 'bulb', color: 0xe2a325 };
+/** 脑洞里的「下一页」。点开会换一张新图，一回合最多两次。 */
+export const FLIP_ICON = { key: 'flip', label: '下一页', shape: 'page', color: 0x3d6ea8 };
 
 export const SHEET_LABEL = Object.fromEntries(ATTRIBUTES.map((item) => [item.key, item.label]));
 
@@ -46,7 +49,7 @@ export const START_GROWTH = {
 };
 
 export function attributeByKey(key) {
-  if (key === CLOUD_ICON.key) return CLOUD_ICON;
+  if (key === FLIP_ICON.key) return FLIP_ICON;
   return ATTRIBUTES.find((item) => item.key === key) || INSIGHT_ICON;
 }
 

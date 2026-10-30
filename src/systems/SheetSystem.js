@@ -5,34 +5,28 @@
  */
 
 import {
-  DIG_GAIN_MAX, DIG_GAIN_MIN, ENERGY_MAX, HOLE_ENERGY_COST, ROUND_ENERGY, SCHEDULES_PER_ROUND, SHEET_MAX,
+  DIG_GAIN_MAX, DIG_GAIN_MIN, ENERGY_RECOVER_RATE, HOLE_ENERGY_COST, SCHEDULES_PER_ROUND, SHEET_MAX,
+  energyMaxFor,
 } from '../config/constants.js';
 import { BOOK_DISCOUNT } from '../data/aspirations.js';
 import { ATTRIBUTES, SHEET_KEYS, SHEET_LABEL } from '../data/attributes.js';
-import { buildBoard } from '../data/board.js';
+import { BRAIN_SKIP_CHANCE, BRAIN_SKIP_MAX, buildBoard } from '../data/board.js';
 import { getBook } from '../data/books.js';
 import { getCareer } from '../data/careers.js';
 import { getItem } from '../data/items.js';
-import { getSkillById, isLearned, mainEffect } from '../data/skills.js';
+import { canLearnSkill, getSkillById, isLearned, mainEffect } from '../data/skills.js';
 import { mulberry32 } from '../utils/rng.js';
 import clamp from '../utils/clamp.js';
 import { changeSatisfaction, checkMoodLines, statusValue } from './MoodSystem.js';
 import { applyEffects } from './StatSystem.js';
 
-/** 点到悟性格时一次加上的悟性。属性格另外给 1 点悟性。 */
+/** 点到悟性格时一次加上的悟性。属性格只加这一项，不再附带悟性。 */
 const INSIGHT_TILE_GAIN = 5;
-const ATTR_TILE_INSIGHT = 1;
 
-/** 商店从初中开门（yearIndex 2）。 */
+/** 商店从小学开门（yearIndex 2：婴儿、幼儿园之后）。 */
 export const SHOP_OPEN_INDEX = 2;
-
-/** 点到乌云时随机说的一句。乌云不加任何东西，只花精力。 */
-const CLOUD_LINES = [
-  '{ta}盯着窗外，什么也没想出来。',
-  '翻开本子，又合上了。',
-  '今天脑子里是灰的。',
-  '{ta}说：别问了，我累。',
-];
+/** 职业书从初中才能买。小学只能买道具。 */
+export const BOOK_OPEN_INDEX = 3;
 
 /** 原来的四项，按这个比例映到面板上。比例写在这里，按钮上的预览才和实际变化一致。 */
 const MIRROR = {
@@ -97,12 +91,12 @@ export function formatSheetChanges(changes = {}) {
 }
 
 export function learnSkill(state, skill) {
-  if (state.learnedSkills.includes(skill.id)) return { ok: false, reason: '学过了' };
-  if (state.household.insight < skill.cost) return { ok: false, reason: '悟性不够' };
-  state.household.insight -= skill.cost;
+  const gate = canLearnSkill(state, skill);
+  if (!gate.ok) return gate;
+  state.household.insight -= gate.cost;
   state.learnedSkills.push(skill.id);
   state.pushLog(`学会了${skill.name}。到「安排」里排进本回合。`);
-  return { ok: true, changes: {} };
+  return { ok: true, changes: { insight: -gate.cost } };
 }
 
 export function schedulesLeft(state) {
@@ -148,6 +142,7 @@ export function clearPlan(state) {
 /** 把右边这一回合的技能按顺序执行，然后清空列表。 */
 export function commitPlan(state) {
   const ids = (state.plan || []).slice();
+  state.justPlayed = ids.slice();
   if (ids.length > 0) state.lastPlan = ids.slice();
   state.plan = [];
   const changes = {};
@@ -173,15 +168,16 @@ export function commitPlan(state) {
 
 /**
  * 一个技能让父母满意多少。表里写了 sat 就用表里的；
- * 没写时：学习类 +3，出风头类 +2，纯放松 -1，其他 +1。
+ * 没写时：学习类 +6，出风头类 +4，纯放松 +1，其他 +3。
+ * 学习仍比放松更讨父母欢心。
  */
 export function skillSatisfaction(skill) {
   if (skill.sat !== undefined) return skill.sat;
-  if ((skill.core?.study ?? 0) > 0) return 3;
+  if ((skill.core?.study ?? 0) > 0) return 6;
   const main = mainEffect(skill);
-  if (main && (main.key === 'face' || main.key === 'charm')) return 2;
-  if (skill.energy > 0) return -1;
-  return 1;
+  if (main && (main.key === 'face' || main.key === 'charm')) return 4;
+  if (skill.energy > 0) return 1;
+  return 3;
 }
 
 /** 状态会改技能效果：心力交瘁减半，家里和睦主加属性 +2。 */
@@ -230,6 +226,10 @@ export function shopOpen(state) {
   return state.yearIndex >= SHOP_OPEN_INDEX;
 }
 
+export function bookOpen(state) {
+  return state.yearIndex >= BOOK_OPEN_INDEX;
+}
+
 /** 书价。志向方向的书打八折。 */
 export function bookPrice(state, book) {
   const career = getCareer(book.career);
@@ -240,9 +240,10 @@ export function bookPrice(state, book) {
   return book.price;
 }
 
-/** 用积蓄买一本职业书。买到后，这个职业的两项技能出现在「职业」标签页里。 */
+/** 用积蓄买一本职业书。买到后，「职业」标签页出现共用的职业技能线。 */
 export function buyBook(state, bookId) {
-  if (!shopOpen(state)) return { ok: false, reason: '商店初中才开门' };
+  if (!shopOpen(state)) return { ok: false, reason: '商店小学才开门' };
+  if (!bookOpen(state)) return { ok: false, reason: '职业道具初中才卖' };
   const book = getBook(bookId);
   if (!book) return { ok: false, reason: '没有这本书' };
   if (state.books.includes(book.id)) return { ok: false, reason: '已经买过了' };
@@ -250,13 +251,13 @@ export function buyBook(state, bookId) {
   if (state.household.money < price) return { ok: false, reason: '积蓄不够' };
   state.household.money -= price;
   state.books.push(book.id);
-  state.pushLog(`买了${book.name}，积蓄-${price}。右边「职业」里多了两项技能。`);
+  state.pushLog(`买了${book.name}，积蓄-${price}。右边「职业」里解锁了技能线。`);
   return { ok: true, price, changes: { money: -price } };
 }
 
 /** 买一个道具，立刻用掉。每个道具每回合只能买一次。 */
 export function buyItem(state, itemId) {
-  if (!shopOpen(state)) return { ok: false, reason: '商店初中才开门' };
+  if (!shopOpen(state)) return { ok: false, reason: '商店小学才开门' };
   const item = getItem(itemId);
   if (!item) return { ok: false, reason: '没有这个道具' };
   if (state.itemsThisRound.includes(item.id)) return { ok: false, reason: '这回合已经买过了' };
@@ -274,12 +275,23 @@ export function buyItem(state, itemId) {
   return { ok: true, changes, notices };
 }
 
-/** 新回合回复精力。状态会多回或少回。 */
+/** 按现在的时期改精力上限。婴儿 60，幼儿园 75，小学 90，初中 120，高中 160。 */
+export function applyStageEnergy(state) {
+  const max = energyMaxFor(state.yearIndex);
+  state.household.energyMax = max;
+  if (state.household.energy > max) state.household.energy = max;
+  return max;
+}
+
+/** 新回合回复「当前时期总精力」的 70%，加在剩下来的点数上，不超过上限。
+ * 婴儿 42、幼儿园 53、小学 63、初中 84、高中 112。心力交瘁少 5，无忧无虑多 5。 */
 export function recoverEnergy(state) {
+  const max = applyStageEnergy(state);
   const household = state.household;
-  const gain = Math.max(0, ROUND_ENERGY + statusValue(state, 'energyBonus', 0));
   const before = household.energy;
-  household.energy = Math.min(household.energyMax || ENERGY_MAX, before + gain);
+  const bonus = statusValue(state, 'energyBonus', 0);
+  const recovered = Math.round(max * ENERGY_RECOVER_RATE) + bonus;
+  household.energy = clamp(before + recovered, 0, max);
   return household.energy - before;
 }
 
@@ -289,7 +301,7 @@ export function digGain(state, index) {
   return DIG_GAIN_MIN + Math.floor(random() * (DIG_GAIN_MAX - DIG_GAIN_MIN + 1));
 }
 
-/** 点开脑洞图上的一格。消耗 5 点精力。属性格随机 +3~5，悟性格 +5 悟性。 */
+/** 点开脑洞图上的一格。精力不够就不能再点。属性格只加这一项，悟性格 +5，下一页格换一张图。 */
 export function digHole(state, index) {
   if (!Array.isArray(state.board) || index < 0 || index >= state.board.length) {
     return { ok: false, reason: '没有这一格' };
@@ -297,17 +309,21 @@ export function digHole(state, index) {
   if (state.dug.includes(index)) return { ok: false, reason: '这里挖过了' };
   if (state.household.energy < HOLE_ENERGY_COST) return { ok: false, reason: '精力不够了，结束回合会回复' };
   const key = state.board[index];
+  const used = state.digsThisRound ?? state.dug.length;
+  if (key === 'flip') {
+    if ((state.brainFlips || 0) >= BRAIN_SKIP_MAX) return { ok: false, reason: '这回合已经翻过两页' };
+    state.household.energy -= HOLE_ENERGY_COST;
+    state.digsThisRound = used + 1;
+    skipBrainPage(state);
+    return { ok: true, flip: true, changes: {} };
+  }
   state.household.energy -= HOLE_ENERGY_COST;
   state.dug.push(index);
-  if (key === 'cloud') {
-    const line = CLOUD_LINES[(index + state.dug.length) % CLOUD_LINES.length];
-    state.pushLog(`脑洞·乌云：精力-${HOLE_ENERGY_COST}。${line}`);
-    return { ok: true, changes: {}, cloud: true };
-  }
+  state.digsThisRound = used + 1;
   const household = state.household;
   if (key === 'insight') {
     const before = household.insight;
-    household.insight = Math.min(household.insightMax, before + INSIGHT_TILE_GAIN);
+    household.insight = before + INSIGHT_TILE_GAIN;
     const gained = household.insight - before;
     state.pushLog(`脑洞·悟性：悟性+${gained}`);
     return { ok: true, changes: { insight: gained } };
@@ -317,15 +333,33 @@ export function digHole(state, index) {
   const amount = Math.max(1, Math.round((digGain(state, index) + statusValue(state, 'digBonus', 0))
     * statusValue(state, 'gainScale', 1)));
   const changes = applySheet(state.child.sheet, { [key]: amount });
-  const before = household.insight;
-  household.insight = Math.min(household.insightMax, before + ATTR_TILE_INSIGHT);
-  if (household.insight > before) changes.insight = household.insight - before;
   state.pushLog(`脑洞·${attr.label}+${changes[key] ?? 0}`);
   return { ok: true, changes };
 }
 
-/** 新回合的脑洞图。压力越高，乌云越多。 */
+/** 新回合的脑洞图。中间 4×4 亮起，一半概率出现一格「下一页」。 */
 export function freshBoard(state) {
-  state.board = buildBoard(state.seed, state.roundSerial, state.child.stats.stress);
   state.dug = [];
+  state.digsThisRound = 0;
+  state.brainFlips = 0;
+  const hasFlip = mulberry32((state.seed + state.roundSerial * 17 + 3) >>> 0)() < BRAIN_SKIP_CHANCE;
+  state.brainHasSkip = hasFlip;
+  state.board = buildBoard(state.seed, state.roundSerial, { flip: hasFlip });
+}
+
+export function canSkipBrain(state) {
+  return (state.brainFlips || 0) < BRAIN_SKIP_MAX;
+}
+
+/** 换一页全新的脑洞。本回合已经点过的次数还在，格子重新从中间 4×4 亮起。 */
+export function skipBrainPage(state) {
+  if (!canSkipBrain(state)) return { ok: false, reason: '这回合已经翻过两页' };
+  state.brainFlips = (state.brainFlips || 0) + 1;
+  state.dug = [];
+  const again = state.brainFlips < BRAIN_SKIP_MAX
+    && mulberry32((state.seed + state.roundSerial * 17 + state.brainFlips * 31) >>> 0)() < BRAIN_SKIP_CHANCE;
+  state.brainHasSkip = again;
+  state.board = buildBoard(state.seed, state.roundSerial + state.brainFlips * 7919, { flip: again });
+  state.pushLog('脑洞翻到了新的一页。中间 4×4 重新亮起。');
+  return { ok: true };
 }

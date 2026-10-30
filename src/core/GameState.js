@@ -3,14 +3,16 @@
  * 作用：这一局的全部进度。存档就是把它变成普通对象放进浏览器。
  * 场景可以读它、通过系统函数改它，不要在界面文件里直接写属性公式。
  *
- * 时间怎么记：yearIndex 是第几个时期（0 婴儿 … 3 高中），round 是这个时期里的第几回合（从 1 开始），
+ * 时间怎么记：yearIndex 是第几个时期（0 婴儿 … 4 高中），round 是这个时期里的第几回合（从 1 开始），
  * roundSerial 是整局已经过了几个回合，用来给脑洞和奖励当随机种子。
  */
 
-import { SAVE_VERSION } from '../config/constants.js';
-import { BOARD_SIZE, buildBoard } from '../data/board.js';
+import { SAVE_VERSION, energyMaxFor } from '../config/constants.js';
+import { BRAIN_SKIP_CHANCE, BOARD_SIZE, buildBoard } from '../data/board.js';
+import { mulberry32 } from '../utils/rng.js';
 import Child from '../models/Child.js';
 import Household from '../models/Household.js';
+import { normalizeFriend } from '../data/friends.js';
 import { fillName } from '../utils/text.js';
 
 const FIRST_LOG = '{name}出生了。先在右边学技能，再到「安排」里排进本回合。';
@@ -24,9 +26,24 @@ export default class GameState {
     this.roundSerial = raw.roundSerial ?? 0;
     this.child = raw.child instanceof Child ? raw.child : new Child(raw.child);
     this.household = raw.household instanceof Household ? raw.household : new Household(raw.household);
+    const energyCap = energyMaxFor(this.yearIndex);
+    if (this.household.energyMax !== energyCap) {
+      if (this.household.energy >= (this.household.energyMax || 0)) this.household.energy = energyCap;
+      this.household.energyMax = energyCap;
+    }
+    if (this.household.energy > energyCap) this.household.energy = energyCap;
     this.log = Array.isArray(raw.log) ? [...raw.log] : [fillName(FIRST_LOG, this.child)];
     this.seenEvents = Array.isArray(raw.seenEvents) ? [...raw.seenEvents] : [];
+    this.seenStories = Array.isArray(raw.seenStories) ? [...raw.seenStories] : [];
     this.pendingEventId = raw.pendingEventId ?? null;
+    this.pendingStoryId = raw.pendingStoryId ?? null;
+    this.pendingStories = Array.isArray(raw.pendingStories) ? [...raw.pendingStories] : [];
+    this.pendingStoryIndex = raw.pendingStoryIndex ?? 0;
+    this.pendingChoiceId = raw.pendingChoiceId ?? null;
+    /** 这一回合刚执行过的技能 id，给事件加权用。 */
+    this.justPlayed = Array.isArray(raw.justPlayed) ? [...raw.justPlayed] : [];
+    /** 初中起的同学会。unlocked 为 false 时面板打不开。 */
+    this.friend = normalizeFriend(raw.friend);
     this.actionsThisYear = Array.isArray(raw.actionsThisYear) ? [...raw.actionsThisYear] : [];
     this.plan = Array.isArray(raw.plan) ? [...raw.plan] : [];
     /** 上一回合排过的技能，「照上回合排」用它。 */
@@ -46,9 +63,16 @@ export default class GameState {
     this.pendingIntro = raw.pendingIntro ?? false;
     /** 已经完成的「当前期望」，记的是时期 id。 */
     this.expectDone = Array.isArray(raw.expectDone) ? [...raw.expectDone] : [];
+    /** 点左下角领过额外奖励的时期 id。 */
+    this.expectBonusClaimed = Array.isArray(raw.expectBonusClaimed) ? [...raw.expectBonusClaimed] : [];
+    this.brainFlips = raw.brainFlips ?? 0;
+    this.brainHasSkip = raw.brainHasSkip ?? mulberry32((this.seed + this.roundSerial * 17 + 3) >>> 0)() < BRAIN_SKIP_CHANCE;
     const savedBoard = Array.isArray(raw.board) && raw.board.length === BOARD_SIZE ? raw.board : null;
-    this.board = savedBoard ? [...savedBoard] : buildBoard(this.seed, this.roundSerial, this.child.stats.stress);
+    this.board = savedBoard
+      ? [...savedBoard]
+      : buildBoard(this.seed, this.roundSerial, { flip: this.brainHasSkip && this.brainFlips < 2 });
     this.dug = savedBoard && Array.isArray(raw.dug) ? [...raw.dug] : [];
+    this.digsThisRound = raw.digsThisRound ?? this.dug.length;
     this.exam = raw.exam ?? null;
     this.endingId = raw.endingId ?? null;
     /** 结局落在哪个职业上。没有够格的职业时是 null。 */
@@ -79,7 +103,14 @@ export default class GameState {
       household: this.household.toJSON(),
       log: this.log,
       seenEvents: this.seenEvents,
+      seenStories: this.seenStories,
       pendingEventId: this.pendingEventId,
+      pendingStoryId: this.pendingStoryId,
+      pendingStories: this.pendingStories,
+      pendingStoryIndex: this.pendingStoryIndex,
+      pendingChoiceId: this.pendingChoiceId,
+      justPlayed: this.justPlayed,
+      friend: this.friend,
       actionsThisYear: this.actionsThisYear,
       plan: this.plan,
       lastPlan: this.lastPlan,
@@ -91,7 +122,11 @@ export default class GameState {
       pendingAspire: this.pendingAspire,
       pendingIntro: this.pendingIntro,
       expectDone: this.expectDone,
+      expectBonusClaimed: this.expectBonusClaimed,
       dug: this.dug,
+      digsThisRound: this.digsThisRound,
+      brainFlips: this.brainFlips,
+      brainHasSkip: this.brainHasSkip,
       board: this.board,
       exam: this.exam,
       endingId: this.endingId,
@@ -101,7 +136,7 @@ export default class GameState {
 
   /** 最新的一句放在最前面，只留 5 句。文案里的 {name}、{ta} 在这里换成孩子的名字和他 / 她。 */
   pushLog(line) {
-    this.log.unshift(fillName(line, this.child));
+    this.log.unshift(fillName(line, this.child, { friend: this.friend?.name }));
     this.log = this.log.slice(0, 5);
   }
 }

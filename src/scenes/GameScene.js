@@ -1,11 +1,11 @@
 /**
  * 文件：src/scenes/GameScene.js
  * 作用：培养界面。左边属性、安排、商店和当前期望，中间点孩子进脑洞，右边用悟性学习。
- * 底部正中是「结束本回合」。属性怎么加减，写在 systems/。这里只接收点击、调用规则、刷新画面。
+ * 「结束本回合」在安排面板里，不放在主画面上。属性怎么加减，写在 systems/。这里只接收点击、调用规则、刷新画面。
  */
 
-import { SCENE, SCHEDULES_PER_ROUND, inkText } from '../config/constants.js';
-import { playBgm, playSfx } from '../audio/AudioManager.js';
+import { SCENE, inkText } from '../config/constants.js';
+import { pauseBgm, playBgm, playSfx, resumeBgm, stopBgm } from '../audio/AudioManager.js';
 import { getStage } from '../data/stages.js';
 import { learnedSkillList } from '../data/skills.js';
 import BaseScene from '../core/BaseScene.js';
@@ -15,6 +15,9 @@ import { saveState } from '../core/SaveManager.js';
 import { spawnStatChanges } from '../effects/FloatingText.js';
 import { answerAspire } from '../systems/AspirationSystem.js';
 import { getEventById } from '../systems/EventSystem.js';
+import { claimExpectBonus } from '../systems/ExpectSystem.js';
+import { getStoryById, resolveStory, rollStoryResult, storyProgress } from '../systems/StorySystem.js';
+import { actWithFriend } from '../systems/FriendSystem.js';
 import {
   buyBook,
   buyItem,
@@ -32,8 +35,11 @@ import AspirationPanel from '../ui/AspirationPanel.js';
 import AttributePanel from '../ui/AttributePanel.js';
 import BrainHolePanel from '../ui/BrainHolePanel.js';
 import CenterChild from '../ui/CenterChild.js';
+import ChoiceBell from '../ui/ChoiceBell.js';
 import EventPanel from '../ui/EventPanel.js';
 import ExpectBox from '../ui/ExpectBox.js';
+import StoryPanel from '../ui/StoryPanel.js';
+import FriendPanel from '../ui/FriendPanel.js';
 import PausePanel from '../ui/PausePanel.js';
 import ProfilePanel from '../ui/ProfilePanel.js';
 import RoomBackdrop from '../ui/RoomBackdrop.js';
@@ -43,9 +49,8 @@ import SkillPanel from '../ui/SkillPanel.js';
 import StageIntro from '../ui/StageIntro.js';
 import { showNotices } from '../ui/Toast.js';
 import TopBar from '../ui/TopBar.js';
-import TextButton from '../ui/components/TextButton.js';
 
-const PANELS = ['eventPanel', 'pausePanel', 'arrangePanel', 'profilePanel', 'brainPanel', 'shopPanel', 'aspirePanel', 'intro'];
+const PANELS = ['eventPanel', 'storyPanel', 'pausePanel', 'arrangePanel', 'profilePanel', 'brainPanel', 'shopPanel', 'friendPanel', 'aspirePanel', 'intro'];
 
 export default class GameScene extends BaseScene {
   constructor() {
@@ -69,16 +74,12 @@ export default class GameScene extends BaseScene {
     this.attributes = new AttributePanel(this, {
       onArrange: () => this.openArrange(),
       onShop: () => this.openShop(),
+      onFriend: () => this.openFriend(),
     });
-    this.expectBox = new ExpectBox(this);
+    this.expectBox = new ExpectBox(this, () => this.onExpectClaim());
+    this.choiceBell = new ChoiceBell(this, () => this.openChoice());
     this.childView = new CenterChild(this, () => this.openBrain());
     this.skills = new SkillPanel(this, (skill) => this.onLearn(skill));
-    this.endButton = new TextButton(this, 640, 642, 250, 52, '结束本回合', () => this.onEndRound(), {
-      fontSize: 20,
-      depth: 6,
-      color: 0x2f7d57,
-      hoverColor: 0x256746,
-    });
     const logBg = this.add.graphics().setDepth(4);
     logBg.fillStyle(0x2c1d12, 0.55);
     logBg.fillRoundedRect(330, 680, 620, 28, 14);
@@ -101,10 +102,19 @@ export default class GameScene extends BaseScene {
   /** 读档或刚开局时，接上没走完的事件、过场或志向问题。 */
   resumePending() {
     const state = this.state;
+    if (state.pendingStoryId || (state.pendingStories && state.pendingStories.length > 0)) {
+      const story = getStoryById(state.pendingStoryId) || getStoryById(state.pendingStories[state.pendingStoryIndex || 0]);
+      if (story) {
+        this.showStory(story);
+        return;
+      }
+      state.pendingStoryId = null;
+      state.pendingStories = [];
+    }
     if (state.pendingEventId) {
       const event = getEventById(state.pendingEventId);
       if (event) {
-        this.showEvent(event);
+        this.showEvent(event, true);
         return;
       }
       state.pendingEventId = null;
@@ -145,18 +155,16 @@ export default class GameScene extends BaseScene {
     this.banner.refresh(state);
     this.attributes.refresh(state);
     this.expectBox.refresh(state);
+    this.choiceBell.refresh(Boolean(state.pendingChoiceId));
     this.childView.refresh(state);
     this.skills.refresh(state);
-    const planned = state.plan?.length || 0;
-    this.endButton.setLabel(`结束本回合（${planned}/${SCHEDULES_PER_ROUND}）`);
-    this.endButton.setVisible(!state.endingId);
     const line = state.log[0] || '';
     this.logText.setText(line.length > 40 ? `${line.slice(0, 40)}…` : line);
   }
 
   modalOpen() {
-    return Boolean(this.eventPanel || this.pausePanel || this.profilePanel
-      || this.brainPanel || this.shopPanel || this.aspirePanel || this.intro);
+    return Boolean(this.eventPanel || this.storyPanel || this.pausePanel || this.profilePanel
+      || this.brainPanel || this.shopPanel || this.friendPanel || this.aspirePanel || this.intro);
   }
 
   canOpen() {
@@ -186,6 +194,31 @@ export default class GameScene extends BaseScene {
       this.profilePanel?.destroy();
       this.profilePanel = null;
     });
+  }
+
+  openFriend() {
+    if (!this.canOpen()) return;
+    this.friendPanel = new FriendPanel(this, this.state, {
+      onAct: (actionId, palId) => this.onFriendAct(actionId, palId),
+      onClose: () => {
+        this.friendPanel?.destroy();
+        this.friendPanel = null;
+      },
+    });
+  }
+
+  onFriendAct(actionId, palId) {
+    if (!this.friendPanel) return;
+    const result = actWithFriend(this.state, actionId, palId);
+    if (!result.ok) {
+      this.friendPanel.refresh(this.state, result.reason || '现在找不了');
+      return;
+    }
+    saveState(this.state);
+    playSfx(this, 'learn');
+    this.bus.emit('state-changed', { changes: result.changes, x: 250, y: 430 });
+    showNotices(this, result.notices);
+    this.friendPanel.refresh(this.state);
   }
 
   openShop() {
@@ -235,10 +268,12 @@ export default class GameScene extends BaseScene {
     this.brainPanel = new BrainHolePanel(
       this,
       this.state,
-      (index) => this.onDig(index),
-      () => {
-        this.brainPanel?.destroy();
-        this.brainPanel = null;
+      {
+        onDig: (index) => this.onDig(index),
+        onClose: () => {
+          this.brainPanel?.destroy();
+          this.brainPanel = null;
+        },
       },
     );
   }
@@ -251,9 +286,14 @@ export default class GameScene extends BaseScene {
       return;
     }
     saveState(this.state);
-    playSfx(this, result.cloud ? 'cloud' : 'dig');
-    this.bus.emit('state-changed', { changes: result.changes, x: 640, y: 280 });
-    this.brainPanel?.refresh(this.state, result.cloud ? '乌云：精力白花了。压力降下来，乌云就少了。' : '');
+    playSfx(this, 'dig');
+    if (result.flip) {
+      this.brainPanel.rebuild(this.state);
+      return;
+    }
+    const at = this.brainPanel.cellAt(index);
+    this.bus.emit('state-changed', { changes: result.changes, x: at?.x ?? 640, y: at?.y ?? 280 });
+    this.brainPanel?.refresh(this.state, '');
   }
 
   onPlan(skill) {
@@ -315,16 +355,21 @@ export default class GameScene extends BaseScene {
     const go = () => {
       this.busy = true;
       const committed = commitPlan(this.state);
-      if (committed.count > 0) {
-        if (committed.money > 0) playSfx(this, 'coin');
-        this.bus.emit('state-changed', { changes: committed.changes, x: 420, y: 360 });
-      }
+      if (committed.count > 0 && committed.money > 0) playSfx(this, 'coin');
       const outcome = endRound(this.state);
       saveState(this.state);
       showNotices(this, outcome.notices);
+      if (outcome.type === 'story') {
+        this.refresh();
+        this.showStory(outcome.story);
+        return;
+      }
+      if (committed.count > 0) {
+        this.bus.emit('state-changed', { changes: committed.changes, x: 420, y: 360 });
+      }
       if (outcome.type === 'event') {
         this.refresh();
-        this.showEvent(outcome.event);
+        this.showEvent(outcome.event, true);
         return;
       }
       this.afterSettle(outcome);
@@ -339,23 +384,87 @@ export default class GameScene extends BaseScene {
     }
   }
 
-  showEvent(event) {
+  showStory(story) {
     this.busy = true;
+    const progress = storyProgress(this.state);
+    const rolled = rollStoryResult(this.state, story, progress.index);
+    this.storyPanel = new StoryPanel(
+      this,
+      story,
+      this.state,
+      rolled,
+      () => this.onStoryDone(),
+      { page: progress.index, total: progress.total },
+    );
+  }
+
+  onStoryDone() {
+    if (!this.storyPanel) return;
+    const panel = this.storyPanel;
+    this.storyPanel = null;
+    this.time.delayedCall(0, () => {
+      panel.destroy();
+      const { notices, done } = resolveStory(this.state);
+      showNotices(this, notices);
+      saveState(this.state);
+      this.refresh();
+      if (!done) {
+        const next = getStoryById(this.state.pendingStoryId);
+        if (next) {
+          this.showStory(next);
+          return;
+        }
+      }
+      const outcome = advance(this.state);
+      saveState(this.state);
+      this.afterSettle(outcome);
+    });
+  }
+
+  showEvent(event, thenAdvance = false) {
+    this.busy = true;
+    this.eventAdvances = thenAdvance;
     this.eventPanel = new EventPanel(this, event, this.state, (index) => this.onEventChoice(index));
+  }
+
+  openChoice() {
+    if (this.busy || this.modalOpen() || this.arrangePanel) return;
+    const event = getEventById(this.state.pendingChoiceId);
+    if (!event) return;
+    this.showEvent(event, false);
+  }
+
+  onExpectClaim() {
+    if (this.busy || this.modalOpen() || this.arrangePanel) return;
+    const result = claimExpectBonus(this.state);
+    if (!result.ok) {
+      showNotices(this, [{ kind: 'info', title: '当前期望', text: result.reason }]);
+      return;
+    }
+    saveState(this.state);
+    this.bus.emit('state-changed', { changes: result.changes, x: 155, y: 600 });
   }
 
   onEventChoice(index) {
     if (!this.eventPanel) return;
     const panel = this.eventPanel;
+    const thenAdvance = this.eventAdvances;
     this.eventPanel = null;
+    this.eventAdvances = false;
     this.time.delayedCall(0, () => {
       panel.destroy();
       const { changes, notices } = resolveEventChoice(this.state, index);
       this.bus.emit('state-changed', { changes, x: 640, y: 340 });
       showNotices(this, notices);
-      const outcome = advance(this.state);
+      if (thenAdvance) {
+        const outcome = advance(this.state);
+        saveState(this.state);
+        this.afterSettle(outcome);
+        return;
+      }
       saveState(this.state);
-      this.afterSettle(outcome);
+      this.busy = false;
+      this.refresh();
     });
   }
 
@@ -413,20 +522,22 @@ export default class GameScene extends BaseScene {
   }
 
   togglePause() {
-    if (this.eventPanel || this.aspirePanel || this.intro) return;
+    if (this.eventPanel || this.storyPanel || this.aspirePanel || this.intro) return;
     if (this.pausePanel) {
       this.pausePanel.destroy();
       this.pausePanel = null;
       this.busy = false;
+      resumeBgm(this);
       this.refresh();
       return;
     }
     this.closeArrange();
-    ['profilePanel', 'brainPanel', 'shopPanel'].forEach((key) => {
+    ['profilePanel', 'brainPanel', 'shopPanel', 'friendPanel'].forEach((key) => {
       this[key]?.destroy();
       this[key] = null;
     });
     this.busy = true;
+    pauseBgm(this);
     this.pausePanel = new PausePanel(this, {
       onResume: () => this.time.delayedCall(0, () => this.togglePause()),
       onRestart: () => this.time.delayedCall(0, () => this.restartGame()),
@@ -436,6 +547,7 @@ export default class GameScene extends BaseScene {
 
   /** 重新开始：同一个名字、同一个性别，从婴儿重来。 */
   restartGame() {
+    stopBgm(this);
     const { name, gender } = this.state.child;
     const next = GameState.createNew({ name, gender });
     this.setState(next);
@@ -444,6 +556,7 @@ export default class GameScene extends BaseScene {
   }
 
   backToMenu() {
+    stopBgm(this);
     saveState(this.state);
     this.scene.start(SCENE.MENU);
   }

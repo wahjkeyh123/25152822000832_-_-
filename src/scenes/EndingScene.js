@@ -9,11 +9,11 @@ import { COLORS, GAME_HEIGHT, GAME_WIDTH, SCENE, inkText } from '../config/const
 import { playSfx } from '../audio/AudioManager.js';
 import BaseScene from '../core/BaseScene.js';
 import GameState from '../core/GameState.js';
-import { saveState } from '../core/SaveManager.js';
+import { loadAlbum, rememberCareer, saveState } from '../core/SaveManager.js';
 import { getDirection } from '../data/aspirations.js';
 import { ATTRIBUTES, SHEET_LABEL } from '../data/attributes.js';
-import { getCareer } from '../data/careers.js';
-import { closestCareer, getEnding } from '../systems/EndingSystem.js';
+import { CAREERS, getCareer } from '../data/careers.js';
+import { closestCareer, endingStory, getEnding } from '../systems/EndingSystem.js';
 import { fadeInObjects } from '../effects/Motion.js';
 import { addPortrait } from '../ui/childArt.js';
 import TextButton from '../ui/components/TextButton.js';
@@ -51,13 +51,15 @@ export default class EndingScene extends BaseScene {
       .setOrigin(0.5);
     this.paintSeal(1040, 112, won);
 
-    const story = fillName(career ? `${ending.text}\n\n${career.story}` : ending.text, child);
-    add(this.add.text(160, 218, story, inkText(18, COLORS.ink, {
+    if (career) rememberCareer(career.id);
+    const story = endingStory(state);
+    add(this.add.text(160, 218, story, inkText(17, COLORS.ink, {
       wordWrap: { width: 440, useAdvancedWrap: true },
-      lineSpacing: 10,
+      lineSpacing: 8,
     })));
 
-    this.paintFacts(160, 470, state, career, near);
+    this.paintAlbum(160, 408);
+    this.paintFacts(160, 468, state, career, near);
     this.paintBars(680, 222, state.child.sheet, career || near);
 
     new TextButton(this, 520, 620, 220, 56, '再来一局', () => this.again(), {
@@ -110,6 +112,22 @@ export default class EndingScene extends BaseScene {
     const text = this.add.text(x, y, won ? '赢' : '输', inkText(40, won ? '#c0392b' : '#7d7f86')).setOrigin(0.5).setAngle(-12);
     [g, text].forEach((obj) => obj.setScale(1.6).setAlpha(0));
     this.tweens.add({ targets: [g, text], scale: 1, alpha: 1, duration: 360, delay: 380, ease: 'Back.easeOut' });
+  }
+
+  paintAlbum(x, y) {
+    const seen = loadAlbum();
+    this.add.text(x, y, `去向图鉴  ${seen.length} / ${CAREERS.length}`, inkText(15, '#6b4b30', { fontStyle: 'bold' })).setOrigin(0, 0.5);
+    CAREERS.forEach((career, index) => {
+      const cx = x + (index % 8) * 54;
+      const cy = y + 28;
+      const got = seen.includes(career.id);
+      const g = this.add.graphics();
+      g.fillStyle(got ? 0xc45c26 : 0xe8d8c4, 1);
+      g.fillRoundedRect(cx, cy - 12, 48, 24, 6);
+      g.lineStyle(1, got ? 0xa84b1c : 0xd9c4a8, 1);
+      g.strokeRoundedRect(cx, cy - 12, 48, 24, 6);
+      this.add.text(cx + 24, cy, career.name.slice(0, 2), inkText(13, got ? '#fff8ee' : '#9a8a78')).setOrigin(0.5);
+    });
   }
 
   paintFacts(x, y, state, career, near) {

@@ -1,7 +1,7 @@
 /**
  * 文件：src/ui/RoomBackdrop.js
- * 作用：培养界面的房间背景。优先用 assets/images/bg/ 里的图；缺图时四个时期各用 Graphics 画一间。
- * 婴儿：婴儿床和挂铃。幼儿园：小黑板和积木。初中：书桌台灯和书架。高中：堆满卷子的书桌、日历、夜景。
+ * 作用：培养界面的房间背景。优先用 assets/images/bg/ 里的图；缺图时五个时期各用 Graphics 画一间。
+ * 婴儿：婴儿床和挂铃。幼儿园：小黑板和积木。小学：课桌和拼音黑板。初中：书桌台灯和书架。高中：堆满卷子的书桌、日历。
  * 左右两侧会被属性栏和学习栏盖住，所以家具只摆在中间 300～990 这一段。
  */
 
@@ -11,9 +11,31 @@ import { shade } from './theme/frame.js';
 
 const FLOOR_Y = 470;
 
+/**
+ * 背景图怎么取景。zoom>1 放大，ox / oy 把画面挪开。
+ * 小学教室把近处的课桌裁掉一点，把中间那块地板让给孩子站。
+ */
+const BG_VIEW = {
+  baby: { zoom: 1.04, ox: 0, oy: 16 },
+  kinder: { zoom: 1.05, ox: 0, oy: 12 },
+  elem: { zoom: 1.07, ox: 0, oy: 10 },
+  middle: { zoom: 1.07, ox: 0, oy: 10 },
+  high: { zoom: 1.04, ox: 8, oy: 20 },
+};
+
+/** 把一张房间图铺进 1280×720，按时期取景。 */
+export function frameRoomPhoto(image, stageId) {
+  const view = BG_VIEW[stageId] || {};
+  const zoom = view.zoom || 1;
+  const cover = Math.max(GAME_WIDTH / image.width, GAME_HEIGHT / image.height);
+  image.setPosition(GAME_WIDTH / 2 + (view.ox || 0), GAME_HEIGHT / 2 + (view.oy || 0));
+  image.setScale(cover * zoom);
+}
+
 const PALETTE = {
   baby: { wall: 0xf6e3d3, stripe: 0xf0d3c0, floor: 0xd9b48c, sky: 0xbfe0f2, rug: 0xf3c1c6 },
   kinder: { wall: 0xf4ead0, stripe: 0xe9dcb5, floor: 0xcfa676, sky: 0xa9d6ef, rug: 0xbfe0b5 },
+  elem: { wall: 0xf7edd4, stripe: 0xead9b4, floor: 0xd4b07a, sky: 0xb5ddf2, rug: 0xf2c98a },
   middle: { wall: 0xe5e8de, stripe: 0xd6dbcc, floor: 0xb98a5e, sky: 0xf2c58e, rug: 0xc9d6e8 },
   high: { wall: 0xd9dbe6, stripe: 0xc9ccdb, floor: 0x9c7552, sky: 0x2b3557, rug: 0xb7b0cf },
 };
@@ -42,8 +64,7 @@ export default class RoomBackdrop {
   /** 背景图铺满画面，底部压一层暖色渐暗，让最下面那行记录看得清。 */
   photo(stageId) {
     const image = this.scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, `bg-${stageId}`);
-    const cover = Math.max(GAME_WIDTH / image.width, GAME_HEIGHT / image.height);
-    image.setScale(cover);
+    frameRoomPhoto(image, stageId);
     const shade = this.scene.add.graphics();
     for (let step = 0; step < 12; step += 1) {
       shade.fillStyle(0x2c1a10, 0.03 + step * 0.012);
@@ -61,6 +82,7 @@ function paintRoom(g, stageId) {
   paintFloor(g, colors);
   if (stageId === 'baby') paintBaby(g, colors);
   else if (stageId === 'kinder') paintKinder(g, colors);
+  else if (stageId === 'elem') paintElem(g, colors);
   else if (stageId === 'middle') paintMiddle(g, colors);
   else paintHigh(g, colors);
   paintLight(g, stageId);
@@ -202,6 +224,47 @@ function paintKinder(g, colors) {
   g.fillRect(438, 376, 8, 86);
 }
 
+function paintElem(g, colors) {
+  paintWindow(g, 770, 120, 180, 130, colors.sky);
+  // 拼音小黑板
+  g.fillStyle(0x000000, 0.12);
+  g.fillRoundedRect(338, 128, 220, 140, 8);
+  g.fillStyle(0x8a5a36, 1);
+  g.fillRoundedRect(330, 120, 220, 140, 8);
+  g.fillStyle(0x2f5845, 1);
+  g.fillRect(342, 132, 196, 116);
+  g.fillStyle(0xf3f1e6, 1);
+  g.fillRect(360, 150, 28, 6);
+  g.fillRect(396, 150, 18, 6);
+  g.fillRect(360, 172, 70, 6);
+  g.fillRect(360, 194, 48, 6);
+  g.fillCircle(500, 168, 16);
+  g.fillRect(492, 186, 16, 40);
+  // 课桌
+  g.fillStyle(0xc9952d, 1);
+  g.fillRect(380, 400, 90, 14);
+  g.fillRect(384, 414, 10, 56);
+  g.fillRect(446, 414, 10, 56);
+  g.fillStyle(0xf6f1e4, 1);
+  g.fillRect(396, 390, 40, 10);
+  g.fillStyle(0xc45c26, 1);
+  g.fillRect(404, 382, 24, 8);
+  // 图书角
+  g.fillStyle(0x8a5a36, 1);
+  g.fillRect(840, 300, 100, 160);
+  g.fillStyle(0x6b4429, 1);
+  [360, 412, 454].forEach((y) => g.fillRect(840, y, 100, 8));
+  const spines = [0xc45c26, 0x3d6ea8, 0x2f7d57, 0xe2b325, 0xd36b8c];
+  [308, 368, 420].forEach((y, shelf) => {
+    let x = 848;
+    for (let index = 0; index < 5; index += 1) {
+      g.fillStyle(spines[(index + shelf) % spines.length], 1);
+      g.fillRect(x, y, 12, 44);
+      x += 16;
+    }
+  });
+}
+
 function paintMiddle(g, colors) {
   paintCurtains(g, 770, 120, 180, 130, 0x8fb3c9);
   paintWindow(g, 770, 120, 180, 130, colors.sky);
@@ -223,24 +286,20 @@ function paintMiddle(g, colors) {
       x += w + 3;
     }
   });
-  // 海报
+  // 海报贴在墙上，中间空出来给人站
   g.fillStyle(0xfff6e6, 1);
   g.fillRect(560, 140, 110, 140);
   g.fillStyle(0xf2c58e, 1);
   g.fillCircle(615, 190, 28);
   g.fillStyle(0x3d6ea8, 1);
   g.fillTriangle(570, 270, 615, 220, 660, 270);
-  // 书桌和台灯
-  paintDesk(g, 860, 0x9c6b43);
+  // 书桌挪到右侧学习栏底下，不占中间地板
+  paintDesk(g, 1088, 0x9c6b43);
   g.fillStyle(0x3d6ea8, 1);
-  g.fillRect(912, 308, 8, 52);
-  g.fillTriangle(890, 314, 950, 314, 920, 284);
+  g.fillRect(1140, 308, 8, 52);
+  g.fillTriangle(1118, 314, 1178, 314, 1148, 284);
   g.fillStyle(0x2f5684, 1);
-  g.fillEllipse(916, 362, 40, 10);
-  g.fillStyle(0xf6f1e4, 1);
-  g.fillRect(812, 350, 64, 10);
-  g.fillStyle(0xc45c26, 1);
-  g.fillRect(820, 340, 48, 10);
+  g.fillEllipse(1144, 362, 40, 10);
 }
 
 function paintHigh(g, colors) {
@@ -264,19 +323,17 @@ function paintHigh(g, colors) {
   g.strokeCircle(600, 170, 34);
   g.lineBetween(600, 170, 600, 146);
   g.lineBetween(600, 170, 618, 178);
-  // 书桌、成堆的卷子
-  paintDesk(g, 860, 0x7d5234);
-  [[820, 350], [826, 338], [818, 326], [824, 314]].forEach(([x, y]) => {
+  // 书桌和卷子靠右，中间只留地毯
+  paintDesk(g, 1088, 0x7d5234);
+  [[1048, 350], [1054, 338], [1046, 326], [1052, 314]].forEach(([x, y]) => {
     g.fillStyle(0xf6f1e4, 1);
     g.fillRect(x - 34, y, 68, 10);
     g.lineStyle(1, 0xc8b8a4, 1);
     g.strokeRect(x - 34, y, 68, 10);
   });
   g.fillStyle(0xf5d26b, 1);
-  g.fillRect(912, 304, 8, 56);
-  g.fillTriangle(890, 310, 950, 310, 920, 282);
-  g.fillStyle(0x7a5a3c, 1);
-  g.fillRoundedRect(880, 344, 46, 16, 4);
+  g.fillRect(1140, 304, 8, 56);
+  g.fillTriangle(1118, 310, 1178, 310, 1148, 282);
 }
 
 function paintDesk(g, cx, color) {

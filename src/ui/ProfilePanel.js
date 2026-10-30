@@ -40,9 +40,11 @@ export default class ProfilePanel extends BasePanel {
     this.block(left + 18, this.top + 290, profile.mood, 20);
     this.block(right + 18, this.top + 290, `${profile.temper}\n${profile.style}`, 22);
 
-    this.track(scene.add.circle(left + 90, this.top + 520, 42, 0xf4e4cc).setStrokeStyle(3, 0xd9c4a8), 5);
-    this.track(scene.add.text(left + 90, this.top + 520, String(profile.knot), inkText(28)).setOrigin(0.5), 5);
-    this.block(left + 150, this.top + 470, '心结是现在的压力。数字高了，晚饭会吃得很安静。', 14);
+    const knot = profile.knot;
+    this.track(scene.add.circle(left + 90, this.top + 508, 42, knot.fill).setStrokeStyle(3, 0xd9c4a8), 5);
+    this.track(scene.add.text(left + 90, this.top + 508, String(state.child.stats.stress), inkText(26, knot.color, { fontStyle: 'bold' })).setOrigin(0.5), 5);
+    this.track(scene.add.text(left + 150, this.top + 458, knot.label, inkText(18, knot.color, { fontStyle: 'bold' })).setOrigin(0, 0), 5);
+    this.block(left + 150, this.top + 488, knot.text, 16);
 
     this.block(right + 18, this.top + 478, profile.advice, 16);
 

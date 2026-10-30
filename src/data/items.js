@@ -1,7 +1,7 @@
 /**
  * 文件：src/data/items.js
- * 作用：商店里的四个道具。用了立刻生效，每个道具每回合限买一次。
- * 两个娱乐用品给孩子减压，两个让父母满意度上去。
+ * 作用：商店里的八个道具。用了立刻生效，每个道具每回合限买一次。
+ * 娱乐用品给孩子减压，另一部分让父母满意度上去。
  * - core：改学识 / 体质 / 心情 / 压力。
  * - sat：改父母满意度。
  * - sheet：改左边七项属性。
@@ -44,6 +44,41 @@ export const ITEMS = [
     sat: 12,
     sheet: { face: 2 },
     detail: '把那张奖状挂到客厅最显眼的地方。',
+  },
+  {
+    id: 'telescope',
+    name: '儿童天文望远镜',
+    kind: 'parent',
+    price: 45,
+    sat: 8,
+    sheet: { iq: 2, imagination: 2 },
+    detail: '晚上把阳台灯关掉，才能看见那几颗星。',
+  },
+  {
+    id: 'paint',
+    name: '专业水彩套装',
+    kind: 'fun',
+    price: 42,
+    core: { mood: 6, stress: -10 },
+    sheet: { imagination: 3 },
+    detail: '颜料盒一打开，作业先放到一边。',
+  },
+  {
+    id: 'football',
+    name: '限量足球',
+    kind: 'fun',
+    price: 38,
+    core: { mood: 5, stress: -12 },
+    sheet: { physique: 3 },
+    detail: '下楼踢一会儿，晚饭前要回来。',
+  },
+  {
+    id: 'musicbox',
+    name: '复古八音盒',
+    kind: 'fun',
+    price: 32,
+    core: { mood: 8, stress: -14 },
+    detail: '发条拧紧，那首短曲子能听一整晚。',
   },
 ];
 

@@ -7,19 +7,22 @@
 import { ATTRIBUTES } from './attributes.js';
 import { getStage } from './stages.js';
 import { getSkillById } from './skills.js';
-import { describeChild } from '../systems/StatSystem.js';
+import { describeChild, knotFor } from '../systems/StatSystem.js';
+import { closestPal } from './friends.js';
 import { fillName } from '../utils/text.js';
 
 const FRIENDS = {
   baby: '还没有可以一起玩的人。醒着的时候，屋里就是{ta}的全部。',
   kinder: '同班的圆圆愿意把蜡笔分{ta}一半。别的孩子{ta}还叫不出名字。',
-  middle: '球友阿宁放学只想多打一会儿。作业的事，他们很少谈。',
-  high: '同桌林夏笔记借{ta}，不问这一次考了多少。',
+  elem: '同桌小杰上课传纸条，下课一起去操场。作业是两个人的事。',
+  middle: '班里有同桌林舟、后座顾河、值日的陈勉。最近跟{friend}走得近。',
+  high: '{friend}还在这个学校。笔记会借，分数不问。周末有时约出来。',
 };
 
 const PLACE = {
   baby: '家里',
   kinder: '幼儿园',
+  elem: '小学部',
   middle: '初中部',
   high: '高中部',
 };
@@ -42,9 +45,12 @@ export function buildProfile(state) {
     if ((sheet[attr.key] ?? 0) < (sheet[lowest] ?? 0)) lowest = attr.key;
   });
   const stress = state.child.stats.stress;
+  const knot = knotFor(stress);
   let temper = '这一期还稳得住，晚饭时会应声。';
-  if (stress >= 70) temper = '绷得很紧，叫{ta}常常要等两秒。';
-  else if (stress <= 25) temper = '还笑得出来，也肯把白天的事说一半。';
+  if (stress >= 85) temper = '整个人是紧的。叫{ta}常常要等两秒，答完又低下头。';
+  else if (stress >= 70) temper = '绷得很紧，笑也是敷衍的。';
+  else if (stress >= 55) temper = '还能应声，只是话短了。';
+  else if (stress <= 20) temper = '还笑得出来，也肯把白天的事说一半。';
   const done = state.lastPlan || [];
   const pushed = done.filter((id) => (getSkillById(id)?.core?.study ?? 0) > 0).length;
   let style = '最近还没怎么安排，先看着{ta}。';
@@ -58,11 +64,11 @@ export function buildProfile(state) {
     gender: child.gender === 'girl' ? '女孩' : '男孩',
     age: `${stage.age} 岁`,
     place: PLACE[stage.id] || stage.grade,
-    friends: fillName(FRIENDS[stage.id] || FRIENDS.baby, child),
+    friends: fillName(FRIENDS[stage.id] || FRIENDS.baby, child, { friend: closestPal(state).name }),
     mood: fillName(describeChild(child.stats, stage), child),
     temper: fillName(temper, child),
     style: fillName(style, child),
-    knot: stress,
+    knot: { ...knot, text: fillName(knot.text, child) },
     advice: fillName(ADVICE[lowest], child),
   };
 }

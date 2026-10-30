@@ -5,16 +5,15 @@
  */
 
 import {
-  ENERGY_MAX, INSIGHT_MAX, START_INSIGHT, START_MONEY, START_SATISFACTION,
+  ENERGY_MAX, START_INSIGHT, START_MONEY, START_SATISFACTION, energyMaxFor,
 } from '../config/constants.js';
 
 export default class Household {
   constructor(raw = {}) {
     this.money = raw.money ?? START_MONEY;
-    this.energy = raw.energy ?? ENERGY_MAX;
-    this.energyMax = raw.energyMax ?? ENERGY_MAX;
+    this.energyMax = raw.energyMax ?? energyMaxFor(0);
+    this.energy = raw.energy ?? this.energyMax ?? ENERGY_MAX;
     this.insight = raw.insight ?? START_INSIGHT;
-    this.insightMax = raw.insightMax ?? INSIGHT_MAX;
     this.satisfaction = raw.satisfaction ?? START_SATISFACTION;
   }
 
@@ -24,7 +23,6 @@ export default class Household {
       energy: this.energy,
       energyMax: this.energyMax,
       insight: this.insight,
-      insightMax: this.insightMax,
       satisfaction: this.satisfaction,
     };
   }

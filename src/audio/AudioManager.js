@@ -30,12 +30,27 @@ export function playClick(scene) {
   playSfx(scene, CLICK_KEY, 0.5);
 }
 
-/** 背景音乐只保留一条。换场景时不重新开始。 */
+/** 背景音乐只保留一条。换场景时不重新开始。暂停后再回来从停住的地方接着放。 */
 export function playBgm(scene, key = BGM_KEY, volume = 0.35) {
   if (!has(scene, key)) return;
   const playing = scene.sound.get(key);
   if (playing?.isPlaying) return;
+  if (playing?.isPaused) {
+    playing.resume();
+    return;
+  }
+  if (playing) playing.stop();
   scene.sound.play(key, { loop: true, volume });
+}
+
+export function pauseBgm(scene, key = BGM_KEY) {
+  scene?.sound?.get(key)?.pause();
+}
+
+export function resumeBgm(scene, key = BGM_KEY) {
+  const playing = scene?.sound?.get(key);
+  if (playing?.isPaused) playing.resume();
+  else playBgm(scene, key);
 }
 
 export function stopBgm(scene, key = BGM_KEY) {

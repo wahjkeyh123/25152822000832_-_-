@@ -2,7 +2,7 @@
  * 文件：src/ui/ArrangePanel.js
  * 作用：安排这一轮要做的技能。
  * 左边是已经学会的全部技能，点中以后按「安排」放进右边。
- * 右边是本回合列表，最多 3 个。按「结束本回合」才真正执行。
+ * 右边是本回合列表，固定 6 个。按这里的「结束本回合」才真正执行。
  */
 
 import { COLORS, SCHEDULES_PER_ROUND, inkText } from '../config/constants.js';
@@ -140,10 +140,10 @@ export default class ArrangePanel extends BasePanel {
     this.clearButton = clear;
 
     for (let index = 0; index < SCHEDULES_PER_ROUND; index += 1) {
-      const y = this.top + 96 + index * 78;
-      const bg = this.track(this.scene.add.rectangle(this.left + 930, y, 380, 64, 0xf6efe4).setStrokeStyle(2, 0xe2d2bc), 5);
-      const label = this.track(this.scene.add.text(this.left + 930, y, '未安排', inkText(18, '#a89880')).setOrigin(0.5), 6);
-      const hit = this.track(this.scene.add.rectangle(this.left + 930, y, 380, 64, 0xffffff, 0.001), 8);
+      const y = this.top + 72 + index * 48;
+      const bg = this.track(this.scene.add.rectangle(this.left + 930, y, 380, 42, 0xf6efe4).setStrokeStyle(2, 0xe2d2bc), 5);
+      const label = this.track(this.scene.add.text(this.left + 930, y, '未安排', inkText(16, '#a89880')).setOrigin(0.5), 6);
+      const hit = this.track(this.scene.add.rectangle(this.left + 930, y, 380, 42, 0xffffff, 0.001), 8);
       hit.on('pointerup', (pointer, localX, localY, event) => {
         if (event && event.stopPropagation) event.stopPropagation();
         if (!this.canClick()) return;
@@ -152,19 +152,19 @@ export default class ArrangePanel extends BasePanel {
       this.slots.push({ bg, label, hit });
     }
 
-    this.repeatButton = new TextButton(this.scene, this.left + 930, this.top + 340, 240, 46, '照上回合再排一次', () => {
+    this.repeatButton = new TextButton(this.scene, this.left + 930, this.top + 372, 240, 42, '照上回合再排一次', () => {
       if (!this.canClick()) return;
       onRepeat();
     }, { fontSize: 16, depth: 208, color: 0x3d6ea8, hoverColor: 0x2f5684 });
     this.objects.push(...this.repeatButton.nodes());
-    this.lastText = this.track(this.scene.add.text(this.left + 930, this.top + 380, '', inkText(13, COLORS.muted, {
+    this.lastText = this.track(this.scene.add.text(this.left + 930, this.top + 404, '', inkText(13, COLORS.muted, {
       align: 'center',
       wordWrap: { width: 360, useAdvancedWrap: true },
     })).setOrigin(0.5, 0), 6);
 
     this.note = this.track(this.scene.add.text(
       this.left + 930,
-      this.top + 500,
+      this.top + 470,
       '点左边的技能，就会加到右边',
       inkText(14, COLORS.muted),
     ).setOrigin(0.5), 6);

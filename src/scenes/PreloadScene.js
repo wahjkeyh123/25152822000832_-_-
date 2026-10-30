@@ -3,7 +3,8 @@
  * 作用：加载页。把 assets/ 里的图片和音频全部读进来，进度条是真的。
  * 文件夹和键名的对应关系：
  * - assets/images/icons/iq.png        → iq（属性图标）
- * - assets/images/bg/middle.jpg       → bg-middle（初中的房间背景）
+ * - assets/images/bg/elem.jpg         → bg-elem（小学的教室背景）
+ * - assets/images/bg/menu.jpg         → bg-menu（开始封面）
  * - assets/images/child/girl-high.jpg → child-girl-high（高中女孩）
  * - assets/audio/click.mp3            → click
  */
@@ -31,6 +32,9 @@ export default class PreloadScene extends BaseScene {
 
     const children = import.meta.glob('../../assets/images/child/*.{png,jpg,webp}', { eager: true, import: 'default' });
     Object.entries(children).forEach(([path, url]) => this.load.image(`child-${fileKey(path)}`, url));
+
+    const shop = import.meta.glob('../../assets/images/shop/*.{png,jpg,webp}', { eager: true, import: 'default' });
+    Object.entries(shop).forEach(([path, url]) => this.load.image(fileKey(path), url));
 
     this.bar = this.add.graphics();
     this.add.text(GAME_WIDTH / 2, 280, GAME_TITLE, inkText(48, COLORS.ink)).setOrigin(0.5);

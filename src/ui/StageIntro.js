@@ -9,6 +9,7 @@ import { SHEET_LABEL } from '../data/attributes.js';
 import { getStage } from '../data/stages.js';
 import { fillName } from '../utils/text.js';
 import { childArtKey } from './childArt.js';
+import { frameRoomPhoto } from './RoomBackdrop.js';
 
 const DEPTH = 300;
 
@@ -31,7 +32,8 @@ export default class StageIntro {
     const bgKey = `bg-${stage.id}`;
     if (scene.textures.exists(bgKey)) {
       const photo = add(scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, bgKey), 1);
-      photo.setScale(Math.max(GAME_WIDTH / photo.width, GAME_HEIGHT / photo.height) * 1.04);
+      frameRoomPhoto(photo, stage.id);
+      photo.setScale(photo.scale * 1.04);
       this.photo = photo;
     }
     const shade = add(scene.add.graphics(), 2);
@@ -65,7 +67,7 @@ export default class StageIntro {
       wordWrap: { width: 500, useAdvancedWrap: true },
     })).setOrigin(0, 0), 5);
 
-    const facts = [`这一期 ${stage.rounds} 个回合，每回合排 3 个技能`];
+    const facts = [`这一期 ${stage.rounds} 个回合，每回合排 6 个技能`];
     if (stage.expect) facts.push(`期望「${stage.expect.title}」：${SHEET_LABEL[stage.expect.key]}到 ${stage.expect.target}`);
     if (stage.allowance) facts.push(`家里进账 ${stage.allowance} 元`);
     add(scene.add.text(x, 478, facts.map((item) => `· ${item}`).join('\n'), inkText(17, '#d9c4a4', {

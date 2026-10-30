@@ -12,8 +12,8 @@ const BONUS = 1;
 
 /** 进入某个时期时要不要问志向。初中问方向，高中问职业。 */
 export function aspireQuestionFor(state) {
-  if (state.yearIndex === 2 && !state.aspiration.direction) return 'direction';
-  if (state.yearIndex === 3 && !state.aspiration.career) return 'career';
+  if (state.yearIndex === 3 && !state.aspiration.direction) return 'direction';
+  if (state.yearIndex === 4 && !state.aspiration.career) return 'career';
   return null;
 }
 

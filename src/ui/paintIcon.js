@@ -60,6 +60,14 @@ function drawShape(g, shape, color, x, y, size) {
     g.fillPoints(points, true);
     return;
   }
+  if (shape === 'page') {
+    g.fillRoundedRect(x - r * 0.55, y - r * 0.62, r * 0.95, r * 1.15, 3);
+    g.fillStyle(0xf6ead4, 1);
+    g.fillRoundedRect(x - r * 0.38, y - r * 0.48, r * 0.95, r * 1.15, 3);
+    g.fillStyle(color, 1);
+    g.fillTriangle(x + r * 0.22, y - r * 0.1, x + r * 0.72, y + r * 0.18, x + r * 0.22, y + r * 0.46);
+    return;
+  }
   if (shape === 'fan') {
     g.slice(x, y + r * 0.2, r, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340), false);
     g.fillPath();
